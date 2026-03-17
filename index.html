@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PEACH à Table! 🍑</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; }
+    .app { max-width: 1100px; margin: 0 auto; padding: 0.75rem; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.25rem; background: white; border: 1px solid #e5e5e5; border-radius: 12px; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .header-title { font-size: 20px; font-weight: 600; }
+    .header-sub { font-size: 12px; color: #888; margin-top: 2px; }
+    .sync-badge { font-size: 11px; color: #888; display: flex; align-items: center; gap: 5px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; transition: background 0.3s; }
+    .dot.syncing { background: #f59e0b; }
+    .dot.error { background: #ef4444; }
+    .tabs { display: flex; gap: 5px; }
+    .tab { padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e5e5; background: transparent; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; font-family: inherit; }
+    .tab.active { background: #1a1a1a; color: white; border-color: #1a1a1a; font-weight: 500; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 270px; gap: 0.75rem; align-items: start; }
+    .card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 0.9rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .section-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #999; font-weight: 600; margin-bottom: 10px; }
+    .search-box { position: relative; margin-bottom: 10px; }
+    .search-input { width: 100%; padding: 7px 10px 7px 30px; border-radius: 8px; border: 1px solid #e5e5e5; background: #f9f9f9; font-size: 12px; font-family: inherit; color: #1a1a1a; }
+    .search-input:focus { outline: none; border-color: #aaa; background: white; }
+    .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 12px; pointer-events: none; }
+    .search-clear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: #999; font-family: inherit; }
+    .search-results { border: 1px solid #e5e5e5; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+    .search-result-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #f0f0f0; background: white; cursor: grab; user-select: none; transition: background 0.1s; }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f9f9f9; }
+    .search-result-item.used { opacity: 0.4; cursor: default; }
+    .search-result-name { font-size: 13px; flex: 1; }
+    .search-result-meta { font-size: 11px; color: #888; margin-top: 1px; }
+    .search-empty { padding: 10px; text-align: center; font-size: 12px; color: #999; font-style: italic; }
+    .day-block { border: 1px solid #e5e5e5; border-radius: 10px; margin-bottom: 6px; overflow: hidden; transition: border-color 0.15s; }
+    .day-block.has-meal { border-color: #ccc; }
+    .day-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; min-height: 48px; background: white; }
+    .day-header.drag-over-meal { background: #eff6ff; border-color: #3b82f6; }
+    .day-name { font-size: 10px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.8px; width: 28px; flex-shrink: 0; }
+    .day-meal-name { font-size: 13px; color: #1a1a1a; }
+    .day-meal-meta { font-size: 11px; color: #888; margin-top: 1px; }
+    .day-empty-meal { font-size: 12px; color: #ccc; font-style: italic; }
+    .cat-badge { font-size: 10px; padding: 2px 7px; border-radius: 99px; flex-shrink: 0; }
+    .cat-fish { background: #dbeafe; color: #1d4ed8; }
+    .cat-meat { background: #fee2e2; color: #b91c1c; }
+    .cat-veggie { background: #dcfce7; color: #15803d; }
+    .remove-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; padding: 0 2px; flex-shrink: 0; line-height: 1; font-family: inherit; }
+    .remove-btn:hover { color: #ef4444; }
+    .day-sides { padding: 5px 10px 7px 38px; display: flex; flex-wrap: wrap; gap: 5px; min-height: 30px; border-top: 1px dashed #f0f0f0; background: #fafafa; }
+    .day-sides.drag-over-side { background: #eff6ff; }
+    .day-sides-empty { font-size: 11px; color: #ccc; font-style: italic; align-self: center; }
+    .side-chip { display: flex; align-items: center; gap: 3px; padding: 2px 8px; background: white; border: 1px solid #e5e5e5; border-radius: 99px; font-size: 11px; }
+    .side-chip button { background: none; border: none; cursor: pointer; color: #ccc; font-size: 12px; padding: 0; line-height: 1; font-family: inherit; }
+    .side-chip button:hover { color: #ef4444; }
+    .lib-tabs { display: flex; margin-bottom: 8px; border: 1px solid #e5e5e5; border-radius: 8px; overflow: hidden; }
+    .lib-tab { flex: 1; padding: 6px; font-size: 11px; border: none; background: transparent; cursor: pointer; color: #888; font-family: inherit; transition: all 0.15s; }
+    .lib-tab.active { background: #f5f5f5; color: #1a1a1a; font-weight: 600; }
+    .filter-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+    .filter-btn { padding: 3px 9px; border-radius: 99px; border: 1px solid #e5e5e5; background: transparent; font-size: 11px; color: #888; cursor: pointer; font-family: inherit; transition: all 0.12s; }
+    .filter-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+    .btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e5e5; background: transparent; font-size: 12px; color: #1a1a1a; cursor: pointer; font-family: inherit; transition: all 0.12s; }
+    .btn:hover { background: #f5f5f5; }
+    .btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+    .btn-primary:hover { background: #333; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+    .btn-sm { padding: 4px 9px; font-size: 11px; }
+    .meal-card, .ing-card { padding: 8px 10px; border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 5px; background: white; cursor: grab; transition: all 0.12s; user-select: none; }
+    .meal-card:hover, .ing-card:hover { border-color: #ccc; background: #fafafa; transform: translateX(2px); }
+    .meal-card.used { opacity: 0.4; cursor: default; transform: none; }
+    .meal-card.editing, .ing-card.editing { border-color: #93c5fd; background: #eff6ff; cursor: default; transform: none; }
+    .meal-card.confirming, .ing-card.confirming { border-color: #fca5a5; background: #fee2e2; cursor: default; transform: none; }
+    .item-top { display: flex; align-items: center; gap: 5px; }
+    .item-name { font-size: 13px; flex: 1; }
+    .item-meta { font-size: 11px; color: #888; margin-top: 3px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .icon-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: #ccc; padding: 2px 4px; border-radius: 4px; line-height: 1; font-family: inherit; transition: all 0.1s; }
+    .icon-btn:hover { background: #f5f5f5; color: #666; }
+    .icon-btn.delete:hover { color: #ef4444; }
+    .delete-confirm { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; padding: 7px 9px; background: #fee2e2; border-radius: 8px; border: 1px solid #fca5a5; }
+    .delete-confirm span { font-size: 11px; color: #b91c1c; }
+    .inline-form { background: #f9f9f9; border-radius: 8px; padding: 10px; margin-top: 6px; border: 1px solid #e5e5e5; }
+    .inline-form.info { background: #eff6ff; border-color: #93c5fd; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+    .form-row.full { grid-template-columns: 1fr; }
+    input[type=text], select { width: 100%; padding: 7px 9px; border-radius: 8px; border: 1px solid #e5e5e5; background: white; color: #1a1a1a; font-size: 12px; font-family: inherit; }
+    input[type=text]:focus, select:focus { outline: none; border-color: #aaa; }
+    .summary-bar { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .summary-chip { font-size: 11px; padding: 3px 9px; border-radius: 99px; background: #f5f5f5; color: #666; border: 1px solid #e5e5e5; }
+    .member-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+    .member-card { padding: 8px 4px; border: 1px solid #e5e5e5; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
+    .member-card.active { border-color: #93c5fd; background: #eff6ff; }
+    .member-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; margin: 0 auto 4px; }
+    .member-name { font-size: 11px; font-weight: 500; }
+    .vote-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 5px; background: white; }
+    .vote-btn { background: none; border: 1px solid #e5e5e5; border-radius: 99px; padding: 3px 10px; font-size: 12px; cursor: pointer; color: #888; transition: all 0.12s; font-family: inherit; }
+    .vote-btn.up.voted { background: #dcfce7; color: #15803d; border-color: #86efac; }
+    .vote-btn.down.voted { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+    .history-row { padding: 8px 10px; border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 5px; background: white; }
+    .shop-group { margin-bottom: 14px; }
+    .shop-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 7px; font-weight: 600; color: #999; }
+    .shop-items { display: flex; flex-wrap: wrap; gap: 5px; }
+    .shop-item { padding: 4px 11px; border: 1px solid #e5e5e5; border-radius: 99px; font-size: 12px; background: white; }
+    .shop-item.meal-item { background: #f5f5f5; font-style: italic; }
+    .empty-state { text-align: center; padding: 1.5rem 1rem; color: #999; font-size: 13px; }
+    .scroll-list { max-height: 380px; overflow-y: auto; padding-right: 2px; }
+    .cat-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #bbb; margin: 10px 0 5px; font-weight: 600; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+    .toast.show { opacity: 1; }
+    @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } .member-grid { grid-template-columns: repeat(3, 1fr); } .tabs { flex-wrap: wrap; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <div class="header-title">PEACH à Table! 🍑</div>
+      <div class="header-sub">La famille · Singapore</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="sync-badge"><div class="dot" id="sync-dot"></div><span id="sync-label">Connected</span></div>
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('plan')">Plan</button>
+        <button class="tab" onclick="showTab('vote')">Vote</button>
+        <button class="tab" onclick="showTab('shop')">Shopping</button>
+        <button class="tab" onclick="showTab('history')">History</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-plan">
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div class="section-label">This week</div>
+            <div style="display:flex;gap:5px;">
+              <button class="btn btn-sm" onclick="autoFill()">Auto-fill</button>
+              <button class="btn btn-sm" onclick="clearWeek()">Clear</button>
+              <button class="btn btn-sm btn-primary" onclick="saveToHistory()">Save ↗</button>
+            </div>
+          </div>
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" type="text" id="meal-search" placeholder="Search meals…" oninput="renderSearch()" autocomplete="off">
+            <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" style="display:none;">×</button>
+          </div>
+          <div id="search-results"></div>
+          <div id="week-grid"></div>
+          <div class="summary-bar" id="summary-bar"></div>
+        </div>
+        <div class="card" style="margin-top:0.75rem;">
+          <div class="section-label">Who's planning?</div>
+          <div class="member-grid" id="member-grid"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div class="section-label">Library <span id="lib-count" style="font-weight:400;color:#bbb;"></span></div>
+            <button class="btn btn-sm" onclick="toggleAddForm()" id="add-toggle">+ Add</button>
+          </div>
+          <div class="lib-tabs">
+            <button class="lib-tab active" id="lib-tab-meals" onclick="setLibTab('meals')">Meals</button>
+            <button class="lib-tab" id="lib-tab-ingredients" onclick="setLibTab('ingredients')">Ingredients</button>
+          </div>
+          <div class="filter-row" id="filter-row"></div>
+          <div class="scroll-list" id="lib-list"></div>
+          <div id="add-form-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-vote" style="display:none;">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="section-label">Rate meals</div>
+        <div id="voter-selector" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+      </div>
+      <div id="vote-list"></div>
+    </div>
+  </div>
+
+  <div id="tab-shop" style="display:none;">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="section-label">Shopping list</div>
+        <span style="font-size:11px;color:#999;">Based on this week's plan</span>
+      </div>
+      <div id="shop-list"></div>
+    </div>
+  </div>
+
+  <div id="tab-history" style="display:none;">
+    <div class="card">
+      <div class="section-label" style="margin-bottom:12px;">Past weeks</div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIGURATION ───────────────────────────────────────────────
+const SUPABASE_URL = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50ZnBwbnl6emhpaHhoenNld2x6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MDc3NTgsImV4cCI6MjA4OTI4Mzc1OH0.dYZQpi7uKAvcbIb_wZJAkcUoW4LDAZiM1tBfk9SICO8;
+const SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50ZnBwbnl6emhpaHhoenNld2x6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzcwNzc1OCwiZXhwIjoyMDg5MjgzNzU4fQ.Eoz19n5ouDClwIsXxOB_dM889ZbuIgGnJqzlqDdlPDk;
+// ─────────────────────────────────────────────────────────────────
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri'];
+const MEMBERS = [
+  {id:'maman',    name:'Maman',      initials:'Ma', color:'#D4537E'},
+  {id:'papa',     name:'Papa',       initials:'Pa', color:'#7F77DD'},
+  {id:'yaya',     name:'Yaya',       initials:'Ya', color:'#1D9E75'},
+  {id:'penelope', name:'Pénélope',   initials:'Pé', color:'#D85A30'},
+  {id:'elliott',  name:'Elliott',    initials:'El', color:'#BA7517'},
+  {id:'clem',     name:'Clémentine', initials:'Cl', color:'#185FA5'},
+];
+const CUISINES = [
+  {id:'france',  label:'Vive la France!',    flag:'🇫🇷'},
+  {id:'america', label:'God Bless America!', flag:'🇺🇸'},
+  {id:'asia',    label:'New Eatery Lah!',    flag:'🇸🇬'},
+  {id:'europa',  label:'Europa League!',     flag:'🇪🇺'},
+];
+const MEAL_CATS = {fish:'Fish & Seafood', meat:'Meat', veggie:'Veggie'};
+const ING_CATS  = {vegetable:'Vegetables', carb:'Carbs', protein:'Protein extras', sauce:'Sauces', fruit:'Fruit', other:'Other'};
+const ING_CAT_ORDER = ['vegetable','carb','protein','sauce','fruit','other'];
+
+const DEFAULT_MEALS = [
+  {id:'m1', name:'Poulet rôti',                  cat:'meat',  protein:'Chicken', cuisine:'france'},
+  {id:'m2', name:'Steak haché & haricots verts', cat:'meat',  protein:'Beef',    cuisine:'france'},
+  {id:'m3', name:'Salmon en papillote',          cat:'fish',  protein:'Salmon',  cuisine:'france'},
+  {id:'m4', name:'Burgers & chips',              cat:'meat',  protein:'Beef',    cuisine:'america'},
+  {id:'m5', name:'Spaghetti bolognaise',         cat:'meat',  protein:'Beef',    cuisine:'europa'},
+  {id:'m6', name:'Shakshuka',                    cat:'veggie',protein:'Eggs',    cuisine:'europa'},
+  {id:'m7', name:'Ratatouille & poached eggs',   cat:'veggie',protein:'Eggs',    cuisine:'france'},
+  {id:'m8', name:'Chicken fried rice',           cat:'meat',  protein:'Chicken', cuisine:'asia'},
+  {id:'yaya_fr', name:'Yaya Fried Rice',         cat:'meat',  protein:'Rice',    cuisine:'asia'},
+];
+
+const DEFAULT_INGREDIENTS = [
+  {id:'vg1',name:'Mixed salad',cat:'vegetable'},{id:'vg2',name:'Cucumber',cat:'vegetable'},
+  {id:'vg3',name:'Broccoli',cat:'vegetable'},{id:'vg4',name:'Capsicum',cat:'vegetable'},
+  {id:'vg5',name:'Spinach',cat:'vegetable'},{id:'vg6',name:'Courgette',cat:'vegetable'},
+  {id:'vg7',name:'Tomatoes',cat:'vegetable'},{id:'vg8',name:'Cherry tomatoes',cat:'vegetable'},
+  {id:'vg9',name:'Carrots',cat:'vegetable'},{id:'vg10',name:'Green beans',cat:'vegetable'},
+  {id:'vg11',name:'Aubergine',cat:'vegetable'},{id:'vg12',name:'Leeks',cat:'vegetable'},
+  {id:'vg13',name:'Mushrooms',cat:'vegetable'},{id:'vg14',name:'Peas',cat:'vegetable'},
+  {id:'vg15',name:'Sweet potato',cat:'vegetable'},{id:'vg16',name:'Asparagus',cat:'vegetable'},
+  {id:'cb1',name:'White rice',cat:'carb'},{id:'cb2',name:'Brown rice',cat:'carb'},
+  {id:'cb3',name:'Pasta',cat:'carb'},{id:'cb4',name:'Rice noodles',cat:'carb'},
+  {id:'cb5',name:'Couscous',cat:'carb'},{id:'cb6',name:'Quinoa',cat:'carb'},
+  {id:'cb7',name:'Potatoes',cat:'carb'},{id:'cb8',name:'Mashed potatoes',cat:'carb'},
+  {id:'cb9',name:'Chips',cat:'carb'},{id:'cb10',name:'Bread',cat:'carb'},
+  {id:'cb11',name:'Polenta',cat:'carb'},{id:'cb12',name:'Lentils',cat:'carb'},{id:'cb13',name:'Chickpeas',cat:'carb'},
+  {id:'pr1',name:'Fried egg',cat:'protein'},{id:'pr2',name:'Poached egg',cat:'protein'},
+  {id:'pr3',name:'Tofu',cat:'protein'},{id:'pr4',name:'Halloumi',cat:'protein'},
+  {id:'sc1',name:'Tomato sauce',cat:'sauce'},{id:'sc2',name:'Pesto',cat:'sauce'},
+  {id:'sc3',name:'Vinaigrette',cat:'sauce'},{id:'sc4',name:'Tahini',cat:'sauce'},
+  {id:'sc5',name:'Harissa',cat:'sauce'},{id:'sc6',name:'Tzatziki',cat:'sauce'},{id:'sc7',name:'Olive oil & lemon',cat:'sauce'},
+  {id:'fr1',name:'Avocado',cat:'fruit'},{id:'fr2',name:'Lemon',cat:'fruit'},{id:'fr3',name:'Mango',cat:'fruit'},
+];
+
+// ─── STATE ────────────────────────────────────────────────────────
+let meals = [];
+let ingredients = JSON.parse(localStorage.getItem('peach_ingredients') || 'null') || DEFAULT_INGREDIENTS;
+let week = {};
+let votes = {};
+let history = [];
+let activeMember = localStorage.getItem('peach_member') || 'maman';
+let cuisineFilter = 'all';
+let ingFilter = 'all';
+let libTab = 'meals';
+let dragItem = null, dragType = null, editingId = null, confirmDeleteId = null, addOpen = false;
+
+function getCuisine(id){ return CUISINES.find(c=>c.id===id)||{flag:'',label:id}; }
+
+// ─── SYNC INDICATOR ───────────────────────────────────────────────
+function setSyncing(){ document.getElementById('sync-dot').className='dot syncing'; document.getElementById('sync-label').textContent='Saving…'; }
+function setSynced(){  document.getElementById('sync-dot').className='dot';         document.getElementById('sync-label').textContent='Saved'; }
+function setError(){   document.getElementById('sync-dot').className='dot error';   document.getElementById('sync-label').textContent='Offline'; }
+
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+
+// ─── SUPABASE LOAD ────────────────────────────────────────────────
+async function loadFromDB(){
+  try {
+    const [mealsRes, weekRes, votesRes, histRes] = await Promise.all([
+      db.from('meals').select('*'),
+      db.from('week_plan').select('*, meals(*)'),
+      db.from('votes').select('*'),
+      db.from('history').select('*').order('saved_at', {ascending:false}),
+    ]);
+    if(mealsRes.data && mealsRes.data.length > 0){
+      meals = mealsRes.data;
+    } else {
+      await seedMeals();
+    }
+    week = {};
+    DAYS.forEach(d => week[d] = {meal: null, sides: []});
+    if(weekRes.data){
+      weekRes.data.forEach(row => {
+        week[row.day] = { meal: row.meals || null, sides: row.sides || [] };
+      });
+    }
+    votes = {};
+    if(votesRes.data){
+      votesRes.data.forEach(v => {
+        if(!votes[v.meal_id]) votes[v.meal_id] = {};
+        votes[v.meal_id][v.member_id] = v.value;
+      });
+    }
+    history = histRes.data || [];
+    setSynced();
+    renderAll();
+  } catch(e){
+    setError();
+    meals = DEFAULT_MEALS;
+    DAYS.forEach(d => week[d] = {meal:null, sides:[]});
+    renderAll();
+  }
+}
+
+async function seedMeals(){
+  const { error } = await db.from('meals').insert(DEFAULT_MEALS);
+  if(!error) meals = [...DEFAULT_MEALS];
+}
+
+// ─── SUPABASE SAVE ────────────────────────────────────────────────
+async function saveMealToDB(meal){
+  setSyncing();
+  const { error } = await db.from('meals').upsert(meal);
+  if(error) setError(); else setSynced();
+}
+async function deleteMealFromDB(id){
+  setSyncing();
+  const { error } = await db.from('meals').delete().eq('id', id);
+  if(error) setError(); else setSynced();
+}
+async function saveDayToDB(day){
+  setSyncing();
+  const { error } = await db.from('week_plan').upsert({
+    day,
+    meal_id: week[day].meal?.id || null,
+    sides: week[day].sides || []
+  });
+  if(error) setError(); else setSynced();
+}
+async function saveVoteToDB(mealId, memberId, value){
+  setSyncing();
+  const { error } = await db.from('votes').upsert({meal_id: mealId, member_id: memberId, value});
+  if(error) setError(); else setSynced();
+}
+async function saveHistoryToDB(entry){
+  setSyncing();
+  const { error } = await db.from('history').insert(entry);
+  if(error) setError(); else setSynced();
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────
+function showTab(t){
+  ['plan','vote','shop','history'].forEach((x,i)=>{
+    document.getElementById('tab-'+x).style.display = x===t?'':'none';
+    document.querySelectorAll('.tab')[i].classList.toggle('active', x===t);
+  });
+  if(t==='vote') renderVote();
+  if(t==='shop') renderShop();
+  if(t==='history') renderHistory();
+}
+
+function renderAll(){ renderSearch(); renderWeekGrid(); renderLib(); renderMembers(); renderSummary(); }
+
+// ─── MEMBERS ──────────────────────────────────────────────────────
+function renderMembers(){
+  document.getElementById('member-grid').innerHTML = MEMBERS.map(m=>`
+    <div class="member-card ${activeMember===m.id?'active':''}" onclick="setMember('${m.id}')">
+      <div class="member-avatar" style="background:${m.color}22;color:${m.color};">${m.initials}</div>
+      <div class="member-name">${m.name}</div>
+    </div>`).join('');
+}
+function setMember(id){ activeMember=id; localStorage.setItem('peach_member',id); renderAll(); }
+
+// ─── SEARCH ───────────────────────────────────────────────────────
+function renderSearch(){
+  const q = (document.getElementById('meal-search')?.value||'').toLowerCase().trim();
+  const clearBtn = document.getElementById('search-clear-btn');
+  const resultsEl = document.getElementById('search-results');
+  if(clearBtn) clearBtn.style.display = q ? '' : 'none';
+  if(!q){ resultsEl.innerHTML=''; return; }
+  const assigned = new Set(DAYS.map(d=>week[d]?.meal?.id).filter(Boolean));
+  const matches = meals.filter(m => m.name.toLowerCase().includes(q) || (m.protein||'').toLowerCase().includes(q));
+  if(!matches.length){ resultsEl.innerHTML='<div class="search-results"><div class="search-empty">No meals found</div></div>'; return; }
+  resultsEl.innerHTML = `<div class="search-results">${matches.map(m=>{
+    const used = assigned.has(m.id); const c = getCuisine(m.cuisine);
+    return `<div class="search-result-item ${used?'used':''}" ${!used?`draggable="true" ondragstart="startDrag('${m.id}','meal')" ondragend="endDrag()"`:''}>
+      <div style="flex:1;"><div class="search-result-name"><strong>${m.name}</strong></div><div class="search-result-meta">${c.flag} ${c.label} · ${m.protein}${used?' · ✓':''}</div></div>
+      <span class="cat-badge cat-${m.cat}">${MEAL_CATS[m.cat]}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+function clearSearch(){ document.getElementById('meal-search').value=''; document.getElementById('search-results').innerHTML=''; document.getElementById('search-clear-btn').style.display='none'; }
+
+// ─── WEEK GRID ────────────────────────────────────────────────────
+function renderWeekGrid(){
+  document.getElementById('week-grid').innerHTML = DAYS.map(d => {
+    const day = week[d]||{meal:null,sides:[]}; const meal = day.meal; const sides = day.sides||[];
+    const c = meal ? getCuisine(meal.cuisine) : null;
+    return `<div class="day-block ${meal?'has-meal':''}">
+      <div class="day-header" id="meal-drop-${d}"
+        ondragover="event.preventDefault();if(dragType==='meal')document.getElementById('meal-drop-${d}').classList.add('drag-over-meal')"
+        ondragleave="document.getElementById('meal-drop-${d}').classList.remove('drag-over-meal')"
+        ondrop="dropOnDay('${d}','meal')">
+        <div class="day-name">${d}</div>
+        ${meal?`
+          <div style="flex:1;">
+            <div class="day-meal-name">${meal.name}</div>
+            <div class="day-meal-meta">${c.flag} ${c.label} · ${meal.protein}</div>
+          </div>
+          <span class="cat-badge cat-${meal.cat}">${MEAL_CATS[meal.cat]}</span>
+          <button class="remove-btn" onclick="removeMeal('${d}')">×</button>
+        `:`<div class="day-empty-meal">drag a meal here…</div>`}
+      </div>
+      <div class="day-sides" id="side-drop-${d}"
+        ondragover="event.preventDefault();if(dragType==='ingredient')document.getElementById('side-drop-${d}').classList.add('drag-over-side')"
+        ondragleave="document.getElementById('side-drop-${d}').classList.remove('drag-over-side')"
+        ondrop="dropOnDay('${d}','side')">
+        ${sides.length ? sides.map((s,i)=>`<span class="side-chip">${s.name}<button onclick="removeSide('${d}',${i})">×</button></span>`).join('') : '<span class="day-sides-empty">+ drop sides</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function dropOnDay(day, zone){
+  document.getElementById('meal-drop-'+day)?.classList.remove('drag-over-meal');
+  document.getElementById('side-drop-'+day)?.classList.remove('drag-over-side');
+  if(!dragItem) return;
+  if(!week[day]) week[day] = {meal:null, sides:[]};
+  if(zone==='meal' && dragType==='meal'){ week[day].meal = dragItem; }
+  else if(zone==='side' && dragType==='ingredient'){
+    if(!week[day].sides.some(s=>s.id===dragItem.id)) week[day].sides.push(dragItem);
+  }
+  dragItem=null; dragType=null;
+  renderAll();
+  await saveDayToDB(day);
+}
+async function removeMeal(day){ week[day].meal=null; renderAll(); await saveDayToDB(day); }
+async function removeSide(day,idx){ week[day].sides.splice(idx,1); renderAll(); await saveDayToDB(day); }
+
+// ─── LIBRARY ──────────────────────────────────────────────────────
+function setLibTab(t){
+  libTab=t; editingId=null; confirmDeleteId=null; addOpen=false;
+  document.getElementById('add-form-container').innerHTML='';
+  document.getElementById('add-toggle').textContent='+ Add';
+  document.getElementById('lib-tab-meals').classList.toggle('active',t==='meals');
+  document.getElementById('lib-tab-ingredients').classList.toggle('active',t==='ingredients');
+  renderLib();
+}
+function renderLib(){
+  if(libTab==='meals'){
+    document.getElementById('lib-count').textContent=`(${meals.length})`;
+    document.getElementById('filter-row').innerHTML=`<button class="filter-btn ${cuisineFilter==='all'?'active':''}" onclick="setCuisineFilter('all')">All</button>`+CUISINES.map(c=>`<button class="filter-btn ${cuisineFilter===c.id?'active':''}" onclick="setCuisineFilter('${c.id}')">${c.flag}</button>`).join('');
+    renderMealLib();
+  } else {
+    document.getElementById('lib-count').textContent=`(${ingredients.length})`;
+    document.getElementById('filter-row').innerHTML=['all',...ING_CAT_ORDER].map(c=>`<button class="filter-btn ${ingFilter===c?'active':''}" onclick="setIngFilter('${c}')">${c==='all'?'All':ING_CATS[c]}</button>`).join('');
+    renderIngLib();
+  }
+}
+function setCuisineFilter(f){ cuisineFilter=f; renderLib(); }
+function setIngFilter(f){ ingFilter=f; renderLib(); }
+
+function renderMealLib(){
+  const assigned = new Set(DAYS.map(d=>week[d]?.meal?.id).filter(Boolean));
+  const list = meals.filter(m=>cuisineFilter==='all'||m.cuisine===cuisineFilter);
+  let html='';
+  ['fish','meat','veggie'].forEach(cat=>{
+    const items=list.filter(m=>m.cat===cat); if(!items.length) return;
+    html+=`<div class="cat-group-label">${MEAL_CATS[cat]}</div>`;
+    items.forEach(m=>{
+      const used=assigned.has(m.id),isE=editingId===m.id,isC=confirmDeleteId===m.id;
+      const c=getCuisine(m.cuisine);
+      const thumbs=Object.values(votes[m.id]||{}).filter(v=>v===1).length;
+      html+=`<div class="meal-card ${isC?'confirming':isE?'editing':used?'used':''}" ${!used&&!isE&&!isC?`draggable="true" ondragstart="startDrag('${m.id}','meal')" ondragend="endDrag()"`:''}>
+        <div class="item-top">
+          <div class="item-name">${m.name}</div>
+          <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+            ${thumbs>0?`<span style="font-size:10px;color:#999;margin-right:2px;">👍${thumbs}</span>`:''}
+            ${used?`<span style="font-size:10px;color:#999;margin-right:2px;">✓</span>`:''}
+            ${!isC?`<button class="icon-btn" onclick="toggleEdit('${m.id}')">✏</button><button class="icon-btn delete" onclick="askDelete('${m.id}')">🗑</button>`:`<button class="icon-btn" onclick="cancelDelete()">✕</button>`}
+          </div>
+        </div>
+        <div class="item-meta"><span>${c.flag}</span><span>${c.label}</span><span style="color:#ddd;">·</span><span>${m.protein}</span></div>
+        ${isC?`<div class="delete-confirm"><span>Remove "${m.name}"?</span><div style="display:flex;gap:4px;"><button class="btn btn-sm btn-danger" onclick="confirmDeleteItem('meal','${m.id}')">Yes</button><button class="btn btn-sm" onclick="cancelDelete()">No</button></div></div>`:''}
+        ${isE?renderMealEditForm(m):''}
+      </div>`;
+    });
+  });
+  document.getElementById('lib-list').innerHTML=html||'<div class="empty-state">No meals yet — add yours!</div>';
+}
+
+function renderIngLib(){
+  const list=ingredients.filter(i=>ingFilter==='all'||i.cat===ingFilter);
+  let html='';
+  ING_CAT_ORDER.forEach(cat=>{
+    const items=list.filter(i=>i.cat===cat); if(!items.length) return;
+    html+=`<div class="cat-group-label">${ING_CATS[cat]}</div>`;
+    items.forEach(i=>{
+      const isE=editingId===i.id,isC=confirmDeleteId===i.id;
+      html+=`<div class="ing-card ${isC?'confirming':isE?'editing':''}" ${!isE&&!isC?`draggable="true" ondragstart="startDrag('${i.id}','ingredient')" ondragend="endDrag()"`:''}>
+        <div class="item-top"><div class="item-name">${i.name}</div>
+          <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+            ${!isC?`<button class="icon-btn" onclick="toggleEdit('${i.id}')">✏</button><button class="icon-btn delete" onclick="askDelete('${i.id}')">🗑</button>`:`<button class="icon-btn" onclick="cancelDelete()">✕</button>`}
+          </div>
+        </div>
+        <div class="item-meta">${ING_CATS[i.cat]||i.cat}</div>
+        ${isC?`<div class="delete-confirm"><span>Remove "${i.name}"?</span><div style="display:flex;gap:4px;"><button class="btn btn-sm btn-danger" onclick="confirmDeleteItem('ingredient','${i.id}')">Yes</button><button class="btn btn-sm" onclick="cancelDelete()">No</button></div></div>`:''}
+        ${isE?renderIngEditForm(i):''}
+      </div>`;
+    });
+  });
+  document.getElementById('lib-list').innerHTML=html||'<div class="empty-state">No ingredients match</div>';
+}
+
+function renderMealEditForm(m){return `<div class="inline-form info">
+  <div class="form-row full"><input type="text" id="edit-name" value="${m.name}"></div>
+  <div class="form-row"><select id="edit-cat">${Object.entries(MEAL_CATS).map(([v,l])=>`<option value="${v}" ${m.cat===v?'selected':''}>${l}</option>`).join('')}</select><input type="text" id="edit-protein" value="${m.protein||''}" placeholder="Protein"></div>
+  <div class="form-row full"><select id="edit-cuisine">${CUISINES.map(c=>`<option value="${c.id}" ${m.cuisine===c.id?'selected':''}>${c.flag} ${c.label}</option>`).join('')}</select></div>
+  <div style="display:flex;gap:5px;"><button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveMealEdit('${m.id}')">Save</button><button class="btn btn-sm" onclick="cancelEdit()">Cancel</button></div>
+</div>`;}
+function renderIngEditForm(i){return `<div class="inline-form info">
+  <div class="form-row full"><input type="text" id="edit-name" value="${i.name}"></div>
+  <div class="form-row full"><select id="edit-cat">${ING_CAT_ORDER.map(c=>`<option value="${c}" ${i.cat===c?'selected':''}>${ING_CATS[c]}</option>`).join('')}</select></div>
+  <div style="display:flex;gap:5px;"><button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveIngEdit('${i.id}')">Save</button><button class="btn btn-sm" onclick="cancelEdit()">Cancel</button></div>
+</div>`;}
+
+function toggleEdit(id){ editingId=editingId===id?null:id; confirmDeleteId=null; addOpen=false; document.getElementById('add-form-container').innerHTML=''; document.getElementById('add-toggle').textContent='+ Add'; renderLib(); }
+function cancelEdit(){ editingId=null; renderLib(); }
+function askDelete(id){ confirmDeleteId=id; editingId=null; renderLib(); }
+function cancelDelete(){ confirmDeleteId=null; renderLib(); }
+
+async function confirmDeleteItem(type, id){
+  if(type==='meal'){
+    meals=meals.filter(m=>m.id!==id);
+    DAYS.forEach(d=>{ if(week[d]?.meal?.id===id){ week[d].meal=null; saveDayToDB(d); } });
+    await deleteMealFromDB(id);
+  } else {
+    ingredients=ingredients.filter(i=>i.id!==id);
+    DAYS.forEach(d=>{ if(week[d]?.sides?.some(s=>s.id===id)){ week[d].sides=week[d].sides.filter(s=>s.id!==id); saveDayToDB(d); } });
+    localStorage.setItem('peach_ingredients', JSON.stringify(ingredients));
+  }
+  confirmDeleteId=null; renderAll();
+}
+
+async function saveMealEdit(id){
+  const idx=meals.findIndex(m=>m.id===id); if(idx===-1) return;
+  meals[idx]={...meals[idx], name:document.getElementById('edit-name').value.trim()||meals[idx].name, cat:document.getElementById('edit-cat').value, protein:document.getElementById('edit-protein').value||meals[idx].protein, cuisine:document.getElementById('edit-cuisine').value};
+  DAYS.forEach(d=>{ if(week[d]?.meal?.id===id){ week[d].meal=meals[idx]; saveDayToDB(d); } });
+  await saveMealToDB(meals[idx]);
+  editingId=null; renderAll();
+}
+async function saveIngEdit(id){
+  const idx=ingredients.findIndex(i=>i.id===id); if(idx===-1) return;
+  ingredients[idx]={...ingredients[idx], name:document.getElementById('edit-name').value.trim()||ingredients[idx].name, cat:document.getElementById('edit-cat').value};
+  DAYS.forEach(d=>{ if(week[d]?.sides) week[d].sides=week[d].sides.map(s=>s.id===id?ingredients[idx]:s); });
+  localStorage.setItem('peach_ingredients', JSON.stringify(ingredients));
+  editingId=null; renderAll();
+}
+
+function startDrag(id,type){ dragType=type; dragItem=type==='meal'?meals.find(m=>m.id===id):ingredients.find(i=>i.id===id); }
+function endDrag(){ dragItem=null; dragType=null; document.querySelectorAll('.day-header,.day-sides').forEach(el=>el.classList.remove('drag-over-meal','drag-over-side')); }
+
+function renderSummary(){
+  const m=DAYS.map(d=>week[d]?.meal).filter(Boolean);
+  const s=DAYS.reduce((acc,d)=>acc+(week[d]?.sides?.length||0),0);
+  if(!m.length&&!s){ document.getElementById('summary-bar').innerHTML=''; return; }
+  const chips=[m.length?`${m.length}/5 meals`:'',...Object.entries(MEAL_CATS).map(([k,l])=>{const n=m.filter(x=>x.cat===k).length;return n?`${n} ${l.toLowerCase()}`:'';}).filter(Boolean),s?`${s} sides`:''].filter(Boolean);
+  document.getElementById('summary-bar').innerHTML=chips.map(c=>`<span class="summary-chip">${c}</span>`).join('');
+}
+
+async function autoFill(){
+  const pool=[...meals].sort(()=>Math.random()-0.5);
+  const fish=pool.filter(m=>m.cat==='fish'), other=pool.filter(m=>m.cat!=='fish');
+  const picks=[...fish.slice(0,2),...other].slice(0,5);
+  DAYS.forEach((d,i)=>{ if(!week[d]) week[d]={meal:null,sides:[]}; week[d].meal=picks[i]||null; });
+  renderAll();
+  await Promise.all(DAYS.map(d=>saveDayToDB(d)));
+}
+async function clearWeek(){
+  DAYS.forEach(d=>{ if(!week[d]) week[d]={meal:null,sides:[]}; week[d].meal=null; week[d].sides=[]; });
+  renderAll();
+  await Promise.all(DAYS.map(d=>saveDayToDB(d)));
+}
+async function saveToHistory(){
+  const m=DAYS.map(d=>week[d]?.meal).filter(Boolean); if(!m.length) return;
+  const entry={ week_label:`Week of ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`, meals:m.map(x=>x.name), sides:DAYS.reduce((acc,d)=>{ if(week[d]?.sides?.length) acc[d]=week[d].sides.map(s=>s.name); return acc; },{}) };
+  history.unshift(entry);
+  await saveHistoryToDB(entry);
+  await clearWeek();
+  showToast('Week saved to history! 🎉');
+}
+
+function toggleAddForm(){
+  addOpen=!addOpen; editingId=null; confirmDeleteId=null;
+  document.getElementById('add-toggle').textContent=addOpen?'✕':'+ Add';
+  const el=document.getElementById('add-form-container');
+  if(!addOpen){ el.innerHTML=''; renderLib(); return; }
+  if(libTab==='meals'){
+    el.innerHTML=`<div class="inline-form" style="margin-top:8px;">
+      <div class="form-row full"><input type="text" id="new-name" placeholder="Meal name"></div>
+      <div class="form-row"><select id="new-cat">${Object.entries(MEAL_CATS).map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select><input type="text" id="new-protein" placeholder="Protein"></div>
+      <div class="form-row full"><select id="new-cuisine">${CUISINES.map(c=>`<option value="${c.id}">${c.flag} ${c.label}</option>`).join('')}</select></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="addMeal()">Add meal</button>
+    </div>`;
+  } else {
+    el.innerHTML=`<div class="inline-form" style="margin-top:8px;">
+      <div class="form-row full"><input type="text" id="new-name" placeholder="e.g. Edamame"></div>
+      <div class="form-row full"><select id="new-cat">${ING_CAT_ORDER.map(c=>`<option value="${c}">${ING_CATS[c]}</option>`).join('')}</select></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="addIngredient()">Add ingredient</button>
+    </div>`;
+  }
+}
+async function addMeal(){
+  const name=document.getElementById('new-name').value.trim(); if(!name) return;
+  const meal={id:'u'+Date.now(), name, cat:document.getElementById('new-cat').value, protein:document.getElementById('new-protein').value||'—', cuisine:document.getElementById('new-cuisine').value};
+  meals.push(meal);
+  await saveMealToDB(meal);
+  addOpen=false; document.getElementById('add-form-container').innerHTML=''; document.getElementById('add-toggle').textContent='+ Add';
+  renderAll(); showToast(`${name} added! 🍽️`);
+}
+function addIngredient(){
+  const name=document.getElementById('new-name').value.trim(); if(!name) return;
+  const ing={id:'i'+Date.now(), name, cat:document.getElementById('new-cat').value};
+  ingredients.push(ing);
+  localStorage.setItem('peach_ingredients', JSON.stringify(ingredients));
+  addOpen=false; document.getElementById('add-form-container').innerHTML=''; document.getElementById('add-toggle').textContent='+ Add';
+  renderAll(); showToast(`${name} added!`);
+}
+
+function renderShop(){
+  const el=document.getElementById('shop-list');
+  const m=DAYS.map(d=>week[d]?.meal).filter(Boolean);
+  const allSides=DAYS.flatMap(d=>week[d]?.sides||[]);
+  if(!m.length&&!allSides.length){ el.innerHTML='<div class="empty-state">Plan your week first — your shopping list appears here automatically.</div>'; return; }
+  let html='';
+  if(m.length) html+=`<div class="shop-group"><div class="shop-group-label">Meals to prepare</div><div class="shop-items">${m.map(x=>`<span class="shop-item meal-item">${getCuisine(x.cuisine).flag} ${x.name}</span>`).join('')}</div></div>`;
+  const byCat={};
+  allSides.forEach(s=>{ if(!byCat[s.cat]) byCat[s.cat]=[]; if(!byCat[s.cat].find(x=>x.id===s.id)) byCat[s.cat].push(s); });
+  ING_CAT_ORDER.forEach(cat=>{ if(!byCat[cat]?.length) return; html+=`<div class="shop-group"><div class="shop-group-label">${ING_CATS[cat]}</div><div class="shop-items">${byCat[cat].map(s=>`<span class="shop-item">${s.name}</span>`).join('')}</div></div>`; });
+  el.innerHTML=html;
+}
+
+function renderVote(){
+  document.getElementById('voter-selector').innerHTML=MEMBERS.map(m=>`<button class="filter-btn ${activeMember===m.id?'active':''}" onclick="setMember('${m.id}');renderVote();" style="font-size:11px;">${m.name}</button>`).join('');
+  document.getElementById('vote-list').innerHTML=meals.map(m=>{
+    const myVote=(votes[m.id]||{})[activeMember];
+    const total=Object.values(votes[m.id]||{}).filter(v=>v===1).length;
+    const c=getCuisine(m.cuisine);
+    return `<div class="vote-row">
+      <div><div style="font-size:13px;">${m.name}</div><div style="font-size:11px;color:#888;">${c.flag} ${c.label} · ${total} 👍</div></div>
+      <div style="display:flex;gap:5px;"><button class="vote-btn up ${myVote===1?'voted':''}" onclick="castVote('${m.id}',1)">👍</button><button class="vote-btn down ${myVote===-1?'voted':''}" onclick="castVote('${m.id}',-1)">👎</button></div>
+    </div>`;
+  }).join('');
+}
+async function castVote(mealId,val){
+  if(!votes[mealId]) votes[mealId]={};
+  votes[mealId][activeMember] = votes[mealId][activeMember]===val ? 0 : val;
+  renderVote(); renderLib();
+  await saveVoteToDB(mealId, activeMember, votes[mealId][activeMember]);
+}
+
+function renderHistory(){
+  const el=document.getElementById('history-list');
+  if(!history.length){ el.innerHTML='<div class="empty-state">No saved weeks yet.</div>'; return; }
+  el.innerHTML=history.map(h=>`<div class="history-row">
+    <div style="font-size:11px;color:#999;margin-bottom:2px;">${h.week_label||h.week||''}</div>
+    <div style="font-size:13px;">${(h.meals||[]).join(' · ')}</div>
+    ${h.sides&&Object.keys(h.sides).length?`<div style="font-size:11px;color:#aaa;margin-top:2px;">${Object.entries(h.sides).map(([d,s])=>`${d}: ${s.join(', ')}`).join(' · ')}</div>`:''}
+  </div>`).join('');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────
+loadFromDB();
+</script>
+</body>
+</html>
