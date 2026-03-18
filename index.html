@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PEACH à Table!</title>
+  <title>PEACH à Table! 🍑</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍑</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
   <style>
@@ -104,6 +104,13 @@
     .shop-item { padding: 4px 11px; border: 1px solid #e5e5e5; border-radius: 99px; font-size: 12px; background: white; }
     .shop-item.meal-item { background: #f5f5f5; font-style: italic; }
     .empty-state { text-align: center; padding: 1.5rem 1rem; color: #999; font-size: 13px; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.visible { display: flex; }
+    .modal { background: white; border-radius: 14px; padding: 1.25rem; width: 100%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .modal-title { font-size: 15px; font-weight: 600; }
+    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #aaa; line-height: 1; padding: 0 4px; font-family: inherit; }
+    .modal-close:hover { color: #333; }
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
     .toast.show { opacity: 1; }
     @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } .header { padding: 0.6rem 0.9rem; } }
@@ -182,6 +189,15 @@
       <div class="section-label" style="margin-bottom:12px;">Past weeks</div>
       <div id="history-list"></div>
     </div>
+  </div>
+</div>
+<div class="modal-overlay" id="add-modal" onclick="handleModalClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Add meal</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -393,9 +409,7 @@ async function removeMeal(day){ week[day].meal=null; renderAll(); await saveDayT
 async function removeSide(day,idx){ week[day].sides.splice(idx,1); renderAll(); await saveDayToDB(day); }
 
 function setLibTab(t){
-  libTab=t; editingId=null; confirmDeleteId=null; addOpen=false;
-  document.getElementById('add-form-container').innerHTML='';
-  document.getElementById('add-toggle').textContent='+ Add';
+  libTab=t; editingId=null; confirmDeleteId=null; addOpen=false; closeModal();
   document.getElementById('lib-tab-meals').classList.toggle('active',t==='meals');
   document.getElementById('lib-tab-ingredients').classList.toggle('active',t==='ingredients');
   renderLib();
@@ -480,7 +494,7 @@ function renderIngEditForm(i){
     +'<div style="display:flex;gap:5px;"><button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveIngEdit(\''+i.id+'\')">Save</button><button class="btn btn-sm" onclick="cancelEdit()">Cancel</button></div></div>';
 }
 
-function toggleEdit(id){ editingId=editingId===id?null:id; confirmDeleteId=null; addOpen=false; document.getElementById('add-form-container').innerHTML=''; document.getElementById('add-toggle').textContent='+ Add'; renderLib(); }
+function toggleEdit(id){ editingId=editingId===id?null:id; confirmDeleteId=null; closeModal(); renderLib(); }
 function cancelEdit(){ editingId=null; renderLib(); }
 function askDelete(id){ confirmDeleteId=id; editingId=null; renderLib(); }
 function cancelDelete(){ confirmDeleteId=null; renderLib(); }
@@ -539,41 +553,49 @@ async function saveToHistory(){
 }
 
 function toggleAddForm(){
-  addOpen=!addOpen; editingId=null; confirmDeleteId=null;
-  document.getElementById('add-toggle').textContent=addOpen?'✕':'+ Add';
-  var el=document.getElementById('add-form-container');
-  if(!addOpen){ el.innerHTML=''; renderLib(); return; }
+  editingId=null; confirmDeleteId=null;
+  document.getElementById('modal-title').textContent=libTab==='meals'?'Add meal':'Add ingredient';
   if(libTab==='meals'){
-    el.innerHTML='<div class="inline-form" style="margin-top:8px;"><div class="form-row full"><input type="text" id="new-name" placeholder="Meal name"></div>'
-      +'<div class="form-row"><select id="new-cat">'+Object.entries(MEAL_CATS).map(function(e){ return '<option value="'+e[0]+'">'+e[1]+'</option>'; }).join('')+'</select><input type="text" id="new-protein" placeholder="Protein"></div>'
-      +'<div class="form-row full"><select id="new-cuisine">'+CUISINES.map(function(c){ return '<option value="'+c.id+'">'+c.flag+' '+c.label+'</option>'; }).join('')+'</select></div>'
-      +'<button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="addMeal()">Add meal</button></div>';
+    document.getElementById('modal-body').innerHTML=
+      '<div class="form-row full" style="margin-bottom:8px;"><input type="text" id="new-name" placeholder="Meal name"></div>'
+      +'<div class="form-row" style="margin-bottom:8px;"><select id="new-cat">'+Object.entries(MEAL_CATS).map(function(e){ return '<option value="'+e[0]+'">'+e[1]+'</option>'; }).join('')+'</select><input type="text" id="new-protein" placeholder="Protein"></div>'
+      +'<div class="form-row full" style="margin-bottom:14px;"><select id="new-cuisine">'+CUISINES.map(function(c){ return '<option value="'+c.id+'">'+c.flag+' '+c.label+'</option>'; }).join('')+'</select></div>'
+      +'<button class="btn btn-primary" style="width:100%;" onclick="addMeal()">Add meal</button>';
   } else {
-    el.innerHTML='<div class="inline-form" style="margin-top:8px;"><div class="form-row full"><input type="text" id="new-name" placeholder="e.g. Edamame"></div>'
-      +'<div class="form-row full"><select id="new-cat">'+ING_CAT_ORDER.map(function(c){ return '<option value="'+c+'">'+ING_CATS[c]+'</option>'; }).join('')+'</select></div>'
-      +'<button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="addIngredient()">Add ingredient</button></div>';
+    document.getElementById('modal-body').innerHTML=
+      '<div class="form-row full" style="margin-bottom:8px;"><input type="text" id="new-name" placeholder="e.g. Edamame"></div>'
+      +'<div class="form-row full" style="margin-bottom:14px;"><select id="new-cat">'+ING_CAT_ORDER.map(function(c){ return '<option value="'+c+'">'+ING_CATS[c]+'</option>'; }).join('')+'</select></div>'
+      +'<button class="btn btn-primary" style="width:100%;" onclick="addIngredient()">Add ingredient</button>';
   }
+  document.getElementById('add-modal').classList.add('visible');
+  setTimeout(function(){ var n=document.getElementById('new-name'); if(n) n.focus(); },50);
 }
+function closeModal(){
+  document.getElementById('add-modal').classList.remove('visible');
+  document.getElementById('modal-body').innerHTML='';
+}
+function handleModalClick(e){
+  if(e.target===document.getElementById('add-modal')) closeModal();
+}
+
 async function addMeal(){
   var name=document.getElementById('new-name').value.trim(); if(!name) return;
   var meal={id:'u'+Date.now(),name:name,cat:document.getElementById('new-cat').value,protein:document.getElementById('new-protein').value||'—',cuisine:document.getElementById('new-cuisine').value};
   meals.push(meal); await saveMealToDB(meal);
-  addOpen=false; document.getElementById('add-form-container').innerHTML=''; document.getElementById('add-toggle').textContent='+ Add';
-  renderAll(); showToast(name+' added! 🍽️');
+  closeModal(); renderAll(); showToast(name+' added! 🍽️');
 }
 function addIngredient(){
   var name=document.getElementById('new-name').value.trim(); if(!name) return;
   var ing={id:'i'+Date.now(),name:name,cat:document.getElementById('new-cat').value};
   ingredients.push(ing); localStorage.setItem('peach_ingredients',JSON.stringify(ingredients));
-  addOpen=false; document.getElementById('add-form-container').innerHTML=''; document.getElementById('add-toggle').textContent='+ Add';
-  renderAll(); showToast(name+' added!');
+  closeModal(); renderAll(); showToast(name+' added!');
 }
 
 function renderShop(){
   var el=document.getElementById('shop-list');
   var m=DAYS.map(function(d){ return week[d]&&week[d].meal; }).filter(Boolean);
   var allSides=DAYS.reduce(function(acc,d){ return acc.concat(week[d]&&week[d].sides?week[d].sides:[]); },[]);
-  if(!m.length&&!allSides.length){ el.innerHTML='<div class="empty-state">Plan your week first.</div>'; return; }
+  if(!m.length&&!allSides.length){ el.innerHTML='<div class="empty-state">Plan your week first — your shopping list appears here automatically.</div>'; return; }
   var html='';
   if(m.length) html+='<div class="shop-group"><div class="shop-group-label">Meals to prepare</div><div class="shop-items">'+m.map(function(x){ return '<span class="shop-item meal-item">'+flagImg(getCuisine(x.cuisine))+x.name+'</span>'; }).join('')+'</div></div>';
   var byCat={};
