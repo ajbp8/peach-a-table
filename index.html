@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PEACH à Table! 🍑</title>
+  <title>PEACH à Table!</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍑</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
   <style>
@@ -12,7 +12,6 @@
     .app { max-width: 1100px; margin: 0 auto; padding: 0.75rem; }
     .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.25rem; background: white; border: 1px solid #e5e5e5; border-radius: 12px; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); flex-wrap: wrap; gap: 8px; }
     .header-title { font-size: 20px; font-weight: 600; }
-    .header-sub { font-size: 12px; color: #888; margin-top: 2px; }
     .sync-badge { font-size: 11px; color: #888; display: flex; align-items: center; gap: 5px; }
     .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; transition: background 0.3s; }
     .dot.syncing { background: #f59e0b; }
@@ -113,10 +112,7 @@
 <body>
 <div class="app">
   <div class="header">
-    <div>
-      <div class="header-title">PEACH à Table! 🍑</div>
-      <div class="header-sub">La famille · Singapore</div>
-    </div>
+    <div class="header-title">PEACH à Table!</div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <div class="sync-badge"><div class="dot" id="sync-dot"></div><span id="sync-label">Connecting…</span></div>
       <div class="tabs">
@@ -144,7 +140,7 @@
             <button class="touch-banner-cancel" onclick="cancelTouchSelect()">Cancel</button>
           </div>
           <div class="search-box">
-            <span class="search-icon">🔍</span>
+            <span class="search-icon"></span>
             <input class="search-input" type="text" id="meal-search" placeholder="Search meals & ingredients…" oninput="renderSearch()" autocomplete="off">
             <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" style="display:none;">×</button>
           </div>
@@ -199,11 +195,12 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DAYS = ['Mon','Tue','Wed','Thu','Fri'];
 const CUISINES = [
-  {id:'france',  label:'Vive la France!',    flag:'🇫🇷'},
-  {id:'america', label:'God Bless America!', flag:'🇺🇸'},
-  {id:'asia',    label:'New Eatery Lah!',    flag:'🇸🇬'},
-  {id:'europa',  label:'Europa League!',     flag:'🇪🇺'},
+  {id:'france',  label:'Vive la France!',    flag:'🇫🇷', img:'https://flagcdn.com/24x18/fr.png'},
+  {id:'america', label:'God Bless America!', flag:'🇺🇸', img:'https://flagcdn.com/24x18/us.png'},
+  {id:'asia',    label:'New Eatery Lah!',    flag:'🇸🇬', img:'https://flagcdn.com/24x18/sg.png'},
+  {id:'europa',  label:'Europa League!',     flag:'🇪🇺', img:'https://flagcdn.com/24x18/eu.png'},
 ];
+function flagImg(c,size){ var s=size||18; return '<img src="'+c.img+'" style="width:'+s+'px;height:auto;border-radius:2px;vertical-align:middle;margin-right:3px;" alt="'+c.flag+'">'; }
 const MEAL_CATS = {fish:'Fish & Seafood', meat:'Meat', veggie:'Veggie'};
 const ING_CATS  = {vegetable:'Vegetables', carb:'Carbs', protein:'Protein extras', sauce:'Sauces', fruit:'Fruit', other:'Other'};
 const ING_CAT_ORDER = ['vegetable','carb','protein','sauce','fruit','other'];
@@ -247,7 +244,7 @@ var addOpen = false;
 var touchSelected = null;
 var touchType = null;
 
-function getCuisine(id){ return CUISINES.find(function(c){ return c.id===id; })||{flag:'',label:id}; }
+function getCuisine(id){ return CUISINES.find(function(c){ return c.id===id; })||{flag:'',label:id,img:''}; }
 function setSyncing(){ document.getElementById('sync-dot').className='dot syncing'; document.getElementById('sync-label').textContent='Saving…'; }
 function setSynced(){  document.getElementById('sync-dot').className='dot';         document.getElementById('sync-label').textContent='Saved'; }
 function setError(){   document.getElementById('sync-dot').className='dot error';   document.getElementById('sync-label').textContent='Offline'; }
@@ -305,9 +302,8 @@ function renderAll(){ renderSearch(); renderWeekGrid(); renderLib(); renderSumma
 
 function startTouchSelect(item,type){
   touchSelected=item; touchType=type;
-  var banner=document.getElementById('touch-banner');
   document.getElementById('touch-banner-text').textContent=type==='meal'?'"'+item.name+'" — tap a day to assign':'"'+item.name+'" — tap a day\'s sides strip';
-  banner.classList.add('visible');
+  document.getElementById('touch-banner').classList.add('visible');
   renderWeekGrid(); renderLib();
 }
 function cancelTouchSelect(){
@@ -341,7 +337,7 @@ function renderSearch(){
     rows.push('<div class="search-result-item '+(used?'used':'')+'"'
       +(!used?' draggable="true" ondragstart="startDrag(\''+m.id+'\',\'meal\')" ondragend="endDrag()"'+(touch?' onclick="startTouchSelect(meals.find(function(x){return x.id===\''+m.id+'\';}),\'meal\')"':''):'')
       +'><div style="flex:1;"><div class="search-result-name">'+highlight(m.name,q)+'</div>'
-      +'<div class="search-result-meta">'+c.flag+' '+c.label+' · '+m.protein+(used?' · ✓':'')+'</div></div>'
+      +'<div class="search-result-meta">'+flagImg(c)+c.label+' · '+m.protein+(used?' · ✓':'')+'</div></div>'
       +'<span class="search-result-type">meal</span><span class="cat-badge cat-'+m.cat+'">'+MEAL_CATS[m.cat]+'</span></div>');
   });
   ingMatches.forEach(function(i){
@@ -368,7 +364,7 @@ function renderWeekGrid(){
       +' ondragleave="document.getElementById(\'meal-drop-'+d+'\').classList.remove(\'drag-over-meal\')"'
       +' ondrop="dropOnDay(\''+d+'\',\'meal\')"'+(mealTarget?' onclick="assignTouchToDay(\''+d+'\',\'meal\')"':'')+' >'
       +'<div class="day-name">'+d+'</div>'
-      +(meal?'<div style="flex:1;"><div class="day-meal-name">'+meal.name+'</div><div class="day-meal-meta">'+c.flag+' '+c.label+' · '+meal.protein+'</div></div>'
+      +(meal?'<div style="flex:1;"><div class="day-meal-name">'+meal.name+'</div><div class="day-meal-meta">'+flagImg(c)+c.label+' · '+meal.protein+'</div></div>'
         +'<span class="cat-badge cat-'+meal.cat+'">'+MEAL_CATS[meal.cat]+'</span>'
         +'<button class="remove-btn" onclick="event.stopPropagation();removeMeal(\''+d+'\')">×</button>'
         :'<div class="day-empty-meal">'+(mealTarget?'👆 Tap to assign':'drag a meal here…')+'</div>')
@@ -408,7 +404,7 @@ function renderLib(){
   if(libTab==='meals'){
     document.getElementById('lib-count').textContent='('+meals.length+')';
     document.getElementById('filter-row').innerHTML='<button class="filter-btn '+(cuisineFilter==='all'?'active':'')+'" onclick="setCuisineFilter(\'all\')">All</button>'
-      +CUISINES.map(function(c){ return '<button class="filter-btn '+(cuisineFilter===c.id?'active':'')+'" onclick="setCuisineFilter(\''+c.id+'\')">'+c.flag+'</button>'; }).join('');
+      +CUISINES.map(function(c){ return '<button class="filter-btn '+(cuisineFilter===c.id?'active':'')+'" onclick="setCuisineFilter(\''+c.id+'\')">'+flagImg(c)+'</button>'; }).join('');
     renderMealLib();
   } else {
     document.getElementById('lib-count').textContent='('+ingredients.length+')';
@@ -439,7 +435,8 @@ function renderMealLib(){
         +(used?'<span style="font-size:10px;color:#999;margin-right:2px;">✓</span>':'')
         +(!isC?'<button class="icon-btn" onclick="event.stopPropagation();toggleEdit(\''+m.id+'\')">✏</button><button class="icon-btn delete" onclick="event.stopPropagation();askDelete(\''+m.id+'\')">🗑</button>'
           :'<button class="icon-btn" onclick="cancelDelete()">✕</button>')
-        +'</div></div><div class="item-meta"><span>'+c.flag+'</span><span>'+c.label+'</span><span style="color:#ddd;">·</span><span>'+m.protein+'</span></div>'
+        +'</div></div>'
+        +'<div class="item-meta">'+flagImg(c)+'<span>'+c.label+'</span><span style="color:#ddd;">·</span><span>'+m.protein+'</span></div>'
         +(isC?'<div class="delete-confirm"><span>Remove "'+m.name+'"?</span><div style="display:flex;gap:4px;"><button class="btn btn-sm btn-danger" onclick="confirmDeleteItem(\'meal\',\''+m.id+'\')">Yes</button><button class="btn btn-sm" onclick="cancelDelete()">No</button></div></div>':'')
         +(isE?renderMealEditForm(m):'')+'</div>';
     });
@@ -578,7 +575,7 @@ function renderShop(){
   var allSides=DAYS.reduce(function(acc,d){ return acc.concat(week[d]&&week[d].sides?week[d].sides:[]); },[]);
   if(!m.length&&!allSides.length){ el.innerHTML='<div class="empty-state">Plan your week first.</div>'; return; }
   var html='';
-  if(m.length) html+='<div class="shop-group"><div class="shop-group-label">Meals to prepare</div><div class="shop-items">'+m.map(function(x){ return '<span class="shop-item meal-item">'+getCuisine(x.cuisine).flag+' '+x.name+'</span>'; }).join('')+'</div></div>';
+  if(m.length) html+='<div class="shop-group"><div class="shop-group-label">Meals to prepare</div><div class="shop-items">'+m.map(function(x){ return '<span class="shop-item meal-item">'+flagImg(getCuisine(x.cuisine))+x.name+'</span>'; }).join('')+'</div></div>';
   var byCat={};
   allSides.forEach(function(s){ if(!byCat[s.cat]) byCat[s.cat]=[]; if(!byCat[s.cat].find(function(x){ return x.id===s.id; })) byCat[s.cat].push(s); });
   ING_CAT_ORDER.forEach(function(cat){ if(!byCat[cat]||!byCat[cat].length) return; html+='<div class="shop-group"><div class="shop-group-label">'+(ING_CATS[cat]||cat)+'</div><div class="shop-items">'+byCat[cat].map(function(s){ return '<span class="shop-item">'+s.name+'</span>'; }).join('')+'</div></div>'; });
