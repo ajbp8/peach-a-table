@@ -111,6 +111,15 @@
     .modal-title { font-size: 15px; font-weight: 600; }
     .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #aaa; line-height: 1; padding: 0 4px; font-family: inherit; }
     .modal-close:hover { color: #333; }
+    .modal-step { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+    .step-num { width: 22px; height: 22px; border-radius: 50%; background: #1a1a1a; color: white; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 7px; }
+    .step-content { flex: 1; }
+    .cuisine-btn { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1.5px solid #e5e5e5; border-radius: 8px; background: white; cursor: pointer; font-size: 12px; font-family: inherit; color: #1a1a1a; transition: all 0.12s; text-align: left; }
+    .cuisine-btn:hover { border-color: #aaa; background: #f9f9f9; }
+    .cuisine-btn.selected { border-color: #1a1a1a; background: #f5f5f5; font-weight: 600; }
+    .cuisine-picker { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; }
+    .btn-green { background: #16a34a; color: white; border-color: #16a34a; }
+    .btn-green:hover { background: #15803d; }
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
     .toast.show { opacity: 1; }
     @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } .header { padding: 0.6rem 0.9rem; } }
@@ -194,7 +203,7 @@
 <div class="modal-overlay" id="add-modal" onclick="handleModalClick(event)">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="modal-title">Add meal</div>
+      <div class="modal-title" id="modal-title">Miam Miam! 🍽️</div>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div id="modal-body"></div>
@@ -217,7 +226,7 @@ const CUISINES = [
   {id:'europa',  label:'Europa League!',     flag:'🇪🇺', img:'https://flagcdn.com/24x18/eu.png'},
 ];
 function flagImg(c,size){ var s=size||18; return '<img src="'+c.img+'" style="width:'+s+'px;height:auto;border-radius:2px;vertical-align:middle;margin-right:3px;" alt="'+c.flag+'">'; }
-const MEAL_CATS = {fish:'Fish & Seafood', meat:'Meat', veggie:'Veggie'};
+const MEAL_CATS = {fish:'Fish', meat:'Meat', veggie:'Veggie'};
 const ING_CATS  = {vegetable:'Vegetables', carb:'Carbs', protein:'Protein extras', sauce:'Sauces', fruit:'Fruit', other:'Other'};
 const ING_CAT_ORDER = ['vegetable','carb','protein','sauce','fruit','other'];
 
@@ -353,7 +362,7 @@ function renderSearch(){
     rows.push('<div class="search-result-item '+(used?'used':'')+'"'
       +(!used?' draggable="true" ondragstart="startDrag(\''+m.id+'\',\'meal\')" ondragend="endDrag()"'+(touch?' onclick="startTouchSelect(meals.find(function(x){return x.id===\''+m.id+'\';}),\'meal\')"':''):'')
       +'><div style="flex:1;"><div class="search-result-name">'+highlight(m.name,q)+'</div>'
-      +'<div class="search-result-meta">'+flagImg(c)+c.label+' · '+m.protein+(used?' · ✓':'')+'</div></div>'
+      +'<div class="search-result-meta">'+flagImg(c)+c.label+(used?' · ✓':'')+'</div></div>'
       +'<span class="search-result-type">meal</span><span class="cat-badge cat-'+m.cat+'">'+MEAL_CATS[m.cat]+'</span></div>');
   });
   ingMatches.forEach(function(i){
@@ -380,7 +389,7 @@ function renderWeekGrid(){
       +' ondragleave="document.getElementById(\'meal-drop-'+d+'\').classList.remove(\'drag-over-meal\')"'
       +' ondrop="dropOnDay(\''+d+'\',\'meal\')"'+(mealTarget?' onclick="assignTouchToDay(\''+d+'\',\'meal\')"':'')+' >'
       +'<div class="day-name">'+d+'</div>'
-      +(meal?'<div style="flex:1;"><div class="day-meal-name">'+meal.name+'</div><div class="day-meal-meta">'+flagImg(c)+c.label+' · '+meal.protein+'</div></div>'
+      +(meal?'<div style="flex:1;"><div class="day-meal-name">'+meal.name+'</div><div class="day-meal-meta">'+flagImg(c)+c.label+'</div></div>'
         +'<span class="cat-badge cat-'+meal.cat+'">'+MEAL_CATS[meal.cat]+'</span>'
         +'<button class="remove-btn" onclick="event.stopPropagation();removeMeal(\''+d+'\')">×</button>'
         :'<div class="day-empty-meal">'+(mealTarget?'👆 Tap to assign':'drag a meal here…')+'</div>')
@@ -450,7 +459,7 @@ function renderMealLib(){
         +(!isC?'<button class="icon-btn" onclick="event.stopPropagation();toggleEdit(\''+m.id+'\')">✏</button><button class="icon-btn delete" onclick="event.stopPropagation();askDelete(\''+m.id+'\')">🗑</button>'
           :'<button class="icon-btn" onclick="cancelDelete()">✕</button>')
         +'</div></div>'
-        +'<div class="item-meta">'+flagImg(c)+'<span>'+c.label+'</span><span style="color:#ddd;">·</span><span>'+m.protein+'</span></div>'
+        +'<div class="item-meta">'+flagImg(c)+'<span>'+c.label+'</span></div>'
         +(isC?'<div class="delete-confirm"><span>Remove "'+m.name+'"?</span><div style="display:flex;gap:4px;"><button class="btn btn-sm btn-danger" onclick="confirmDeleteItem(\'meal\',\''+m.id+'\')">Yes</button><button class="btn btn-sm" onclick="cancelDelete()">No</button></div></div>':'')
         +(isE?renderMealEditForm(m):'')+'</div>';
     });
@@ -483,8 +492,7 @@ function renderIngLib(){
 
 function renderMealEditForm(m){
   return '<div class="inline-form info"><div class="form-row full"><input type="text" id="edit-name" value="'+m.name+'"></div>'
-    +'<div class="form-row"><select id="edit-cat">'+Object.entries(MEAL_CATS).map(function(e){ return '<option value="'+e[0]+'"'+(m.cat===e[0]?' selected':'')+'>'+e[1]+'</option>'; }).join('')+'</select>'
-    +'<input type="text" id="edit-protein" value="'+(m.protein||'')+'" placeholder="Protein"></div>'
+    +'<div class="form-row"><select id="edit-cat">'+Object.entries(MEAL_CATS).map(function(e){ return '<option value="'+e[0]+'"'+(m.cat===e[0]?' selected':'')+'>'+e[1]+'</option>'; }).join('')+'</select></div>'
     +'<div class="form-row full"><select id="edit-cuisine">'+CUISINES.map(function(c){ return '<option value="'+c.id+'"'+(m.cuisine===c.id?' selected':'')+'>'+c.flag+' '+c.label+'</option>'; }).join('')+'</select></div>'
     +'<div style="display:flex;gap:5px;"><button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveMealEdit(\''+m.id+'\')">Save</button><button class="btn btn-sm" onclick="cancelEdit()">Cancel</button></div></div>';
 }
@@ -513,7 +521,7 @@ async function confirmDeleteItem(type,id){
 }
 async function saveMealEdit(id){
   var idx=meals.findIndex(function(m){ return m.id===id; }); if(idx===-1) return;
-  meals[idx]=Object.assign({},meals[idx],{name:document.getElementById('edit-name').value.trim()||meals[idx].name,cat:document.getElementById('edit-cat').value,protein:document.getElementById('edit-protein').value||meals[idx].protein,cuisine:document.getElementById('edit-cuisine').value});
+  meals[idx]=Object.assign({},meals[idx],{name:document.getElementById('edit-name').value.trim()||meals[idx].name,cat:document.getElementById('edit-cat').value,cuisine:document.getElementById('edit-cuisine').value});
   DAYS.forEach(function(d){ if(week[d]&&week[d].meal&&week[d].meal.id===id){ week[d].meal=meals[idx]; saveDayToDB(d); } });
   await saveMealToDB(meals[idx]); editingId=null; renderAll();
 }
@@ -554,21 +562,70 @@ async function saveToHistory(){
 
 function toggleAddForm(){
   editingId=null; confirmDeleteId=null;
-  document.getElementById('modal-title').textContent=libTab==='meals'?'Add meal':'Add ingredient';
   if(libTab==='meals'){
+    document.getElementById('modal-title').textContent='Miam Miam! 🍽️';
     document.getElementById('modal-body').innerHTML=
-      '<div class="form-row full" style="margin-bottom:8px;"><input type="text" id="new-name" placeholder="Meal name"></div>'
-      +'<div class="form-row" style="margin-bottom:8px;"><select id="new-cat">'+Object.entries(MEAL_CATS).map(function(e){ return '<option value="'+e[0]+'">'+e[1]+'</option>'; }).join('')+'</select><input type="text" id="new-protein" placeholder="Protein"></div>'
-      +'<div class="form-row full" style="margin-bottom:14px;"><select id="new-cuisine">'+CUISINES.map(function(c){ return '<option value="'+c.id+'">'+c.flag+' '+c.label+'</option>'; }).join('')+'</select></div>'
-      +'<button class="btn btn-primary" style="width:100%;" onclick="addMeal()">Add meal</button>';
+      '<div class="modal-step">'
+        +'<div class="step-num">1</div>'
+        +'<div class="step-content"><input type="text" id="new-name" placeholder="Meal name" style="width:100%;"></div>'
+      +'</div>'
+      +'<div class="modal-step">'
+        +'<div class="step-num">2</div>'
+        +'<div class="step-content">'
+          +'<div style="display:flex;gap:6px;">'
+            +['meat','veggie','fish'].map(function(cat){
+              return '<button class="cuisine-btn" id="cat-btn-'+cat+'" onclick="selectCat(\''+cat+'\')" style="flex:1;justify-content:center;">'
+                +'<span class="cat-badge cat-'+cat+'" style="pointer-events:none;">'+MEAL_CATS[cat]+'</span>'
+              +'</button>';
+            }).join('')
+          +'</div>'
+          +'<input type="hidden" id="new-cat" value="meat">'
+        +'</div>'
+      +'</div>'
+      +'<div class="modal-step" style="margin-bottom:16px;">'
+        +'<div class="step-num">3</div>'
+        +'<div class="step-content">'
+          +'<div class="cuisine-picker">'
+            +CUISINES.map(function(c){
+              return '<button class="cuisine-btn" id="cuis-btn-'+c.id+'" onclick="selectCuisine(\''+c.id+'\')">'
+                +'<img src="'+c.img+'" style="width:20px;height:auto;border-radius:2px;" alt="'+c.flag+'">'
+                +'<span>'+c.label+'</span>'
+              +'</button>';
+            }).join('')
+          +'</div>'
+          +'<input type="hidden" id="new-cuisine" value="france">'
+        +'</div>'
+      +'</div>'
+      +'<button class="btn btn-green" style="width:100%;padding:10px;" onclick="addMeal()">Add meal</button>';
+    document.getElementById('add-modal').classList.add('visible');
+    setTimeout(function(){
+      document.getElementById('new-name').focus();
+      selectCat('meat');
+      selectCuisine('france');
+    },50);
   } else {
+    document.getElementById('modal-title').textContent='Add ingredient';
     document.getElementById('modal-body').innerHTML=
       '<div class="form-row full" style="margin-bottom:8px;"><input type="text" id="new-name" placeholder="e.g. Edamame"></div>'
       +'<div class="form-row full" style="margin-bottom:14px;"><select id="new-cat">'+ING_CAT_ORDER.map(function(c){ return '<option value="'+c+'">'+ING_CATS[c]+'</option>'; }).join('')+'</select></div>'
-      +'<button class="btn btn-primary" style="width:100%;" onclick="addIngredient()">Add ingredient</button>';
+      +'<button class="btn btn-green" style="width:100%;padding:10px;" onclick="addIngredient()">Add ingredient</button>';
+    document.getElementById('add-modal').classList.add('visible');
+    setTimeout(function(){ document.getElementById('new-name').focus(); },50);
   }
-  document.getElementById('add-modal').classList.add('visible');
-  setTimeout(function(){ var n=document.getElementById('new-name'); if(n) n.focus(); },50);
+}
+function selectCat(cat){
+  document.getElementById('new-cat').value=cat;
+  ['meat','veggie','fish'].forEach(function(c){
+    var btn=document.getElementById('cat-btn-'+c);
+    if(btn) btn.classList.toggle('selected',c===cat);
+  });
+}
+function selectCuisine(id){
+  document.getElementById('new-cuisine').value=id;
+  CUISINES.forEach(function(c){
+    var btn=document.getElementById('cuis-btn-'+c.id);
+    if(btn) btn.classList.toggle('selected',c.id===id);
+  });
 }
 function closeModal(){
   document.getElementById('add-modal').classList.remove('visible');
@@ -580,7 +637,7 @@ function handleModalClick(e){
 
 async function addMeal(){
   var name=document.getElementById('new-name').value.trim(); if(!name) return;
-  var meal={id:'u'+Date.now(),name:name,cat:document.getElementById('new-cat').value,protein:document.getElementById('new-protein').value||'—',cuisine:document.getElementById('new-cuisine').value};
+  var meal={id:'u'+Date.now(),name:name,cat:document.getElementById('new-cat').value,protein:'',cuisine:document.getElementById('new-cuisine').value};
   meals.push(meal); await saveMealToDB(meal);
   closeModal(); renderAll(); showToast(name+' added! 🍽️');
 }
