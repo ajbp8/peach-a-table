@@ -256,8 +256,8 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://ntfppnyzzhihxhzsewlz.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_nGq9HOi76PqGsWjaYoNaNA_iccAvqbV';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_KEY';
 // ─────────────────────────────────────────────────────────────────
 
 const { createClient } = supabase;
@@ -889,7 +889,7 @@ function nestorCardHTML(s,i){
   return '<div class="nestor-card" id="nestor-card-'+i+'">'
     +'<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
       +'<input class="nestor-meal-input" id="nestor-name-'+i+'" value="'+s.name+'" type="text" style="flex:1;" placeholder="Meal name">'
-      +'<button onclick="replaceNestorCard('+i+')" title="Get a different suggestion" style="background:none;border:none;cursor:pointer;font-size:18px;color:#ccc;padding:2px 4px;flex-shrink:0;line-height:1;font-family:inherit;" onmouseover="this.style.color='#666'" onmouseout="this.style.color='#ccc'">↺</button>'
+      +'<button onclick="replaceNestorCard('+i+')" title="Get a different suggestion" style="background:none;border:none;cursor:pointer;font-size:18px;color:#ccc;padding:2px 4px;flex-shrink:0;line-height:1;font-family:inherit;">↺</button>'
     +'</div>'
     +'<div class="nestor-cat-row">'
       +'<span class="cat-badge cat-'+s.cat+'">'+MEAL_CATS[s.cat]+'</span>'
