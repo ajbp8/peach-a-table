@@ -158,6 +158,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <button class="nestor-btn" onclick="openNestor()" title="Ask Nestor for ideas"><img src="./Nestor.png" style="width:36px;height:36px;object-fit:cover;border-radius:50%;" alt="Nestor"></button>
+      <button onclick="openSettings()" title="Settings" style="background:none;border:none;cursor:pointer;font-size:18px;color:#aaa;padding:2px 4px;line-height:1;">⚙️</button>
       <div class="sync-badge"><div class="dot" id="sync-dot"></div><span id="sync-label">Connecting…</span></div>
       <div class="tabs">
         <button class="tab active" onclick="showTab('plan')">Plan</button>
@@ -229,6 +230,25 @@
   </div>
 </div>
 <div class="modal-overlay" id="add-modal" onclick="handleModalClick(event)">
+
+<div class="modal-overlay" id="settings-modal" onclick="handleSettingsClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Settings</div>
+      <button class="modal-close" onclick="closeSettings()">×</button>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Anthropic API Key</div>
+      <div style="font-size:11px;color:#888;margin-bottom:10px;">Required for Nestor — stored only in your browser. Get yours at <a href="https://console.anthropic.com" target="_blank" style="color:#3b82f6;">console.anthropic.com</a></div>
+      <input type="password" id="api-key-input" placeholder="sk-ant-api03-…" style="margin-bottom:10px;">
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="saveApiKey()">Save key</button>
+        <button class="btn btn-danger btn-sm" onclick="clearApiKey()">Clear</button>
+      </div>
+      <div id="api-key-status" style="font-size:11px;margin-top:8px;color:#888;"></div>
+    </div>
+  </div>
+</div>
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="modal-title">Miam Miam! 🍽️</div>
@@ -323,6 +343,25 @@ function setSynced(){  document.getElementById('sync-dot').className='dot';     
 function setError(){   document.getElementById('sync-dot').className='dot error';   document.getElementById('sync-label').textContent='Offline'; }
 function showToast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); },2500); }
 function isTouchDevice(){ return 'ontouchstart' in window; }
+
+// ── SETTINGS / API KEY ────────────────────────────────────────────
+function getApiKey(){ return localStorage.getItem('peach_anthropic_key')||''; }
+function openSettings(){
+  var existing=localStorage.getItem('peach_anthropic_key')||'';
+  document.getElementById('api-key-input').value=existing;
+  document.getElementById('api-key-status').textContent=existing?'✅ Key saved in your browser':'No key saved yet';
+  document.getElementById('settings-modal').classList.add('visible');
+}
+function closeSettings(){ document.getElementById('settings-modal').classList.remove('visible'); }
+function handleSettingsClick(e){ if(e.target===document.getElementById('settings-modal')) closeSettings(); }
+function saveApiKey(){
+  var key=document.getElementById('api-key-input').value.trim();
+  if(!key){ document.getElementById('api-key-status').textContent='⚠️ Please enter a key'; return; }
+  localStorage.setItem('peach_anthropic_key',key);
+  document.getElementById('api-key-status').textContent='✅ Key saved!';
+  setTimeout(closeSettings,1000);
+}
+function clearApiKey(){ localStorage.removeItem('peach_anthropic_key'); document.getElementById('api-key-input').value=''; document.getElementById('api-key-status').textContent='Key cleared'; }
 
 // ── SUPABASE LOAD ─────────────────────────────────────────────────
 async function loadFromDB(){
