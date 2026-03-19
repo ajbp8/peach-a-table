@@ -560,7 +560,8 @@ function renderMealLib(){
       +(!isC?'<button class="icon-btn" onclick="event.stopPropagation();toggleEdit(\''+m.id+'\')">✏</button><button class="icon-btn delete" onclick="event.stopPropagation();askDelete(\''+m.id+'\')">🗑</button>'
         :'<button class="icon-btn" onclick="cancelDelete()">✕</button>')
       +'</div></div>'
-      +'<div class="item-meta">'+flagImg(c,13)+'<span>'+c.label+'</span><span style="color:#e5e5e5;">·</span><span class="cat-badge cat-'+m.cat+'">'+MEAL_CATS[m.cat]+'</span>'+(m.url?'<a href="'+m.url+'" target="_blank" onclick="event.stopPropagation()" style="color:#3b82f6;font-size:10px;text-decoration:none;margin-left:2px;">🔗</a>':'')+'</div>'
+      +'+'<div class="item-meta">'+flagImg(c,13)+'<span>'+c.label+'</span><span style="color:#e5e5e5;">·</span><span class="cat-badge cat-'+m.cat+'">'+MEAL_CATS[m.cat]+'</span></div>'
++(m.url?'<a href="'+m.url+'" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;margin-top:4px;font-size:10px;color:#3b82f6;text-decoration:none;">🔗 Recipe link</a>':'')'
       +(isC?'<div class="delete-confirm"><span>Remove "'+m.name+'"?</span><div style="display:flex;gap:4px;"><button class="btn btn-sm btn-danger" onclick="confirmDeleteItem(\'meal\',\''+m.id+'\')">Yes</button><button class="btn btn-sm" onclick="cancelDelete()">No</button></div></div>':'')
       +(isE?renderMealEditForm(m):'')+'</div>';
   });
