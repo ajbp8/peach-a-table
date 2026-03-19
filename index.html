@@ -297,7 +297,7 @@ const DEFAULT_INGREDIENTS = [
 var meals = [];
 var ingredients = JSON.parse(localStorage.getItem('peach_ingredients') || 'null') || DEFAULT_INGREDIENTS;
 var week = {};
-var history = [];
+var weekHistory = [];
 var cuisineFilter = 'all';
 var catFilter = 'all';
 var ingFilter = 'all';
@@ -331,7 +331,7 @@ async function loadFromDB(){
     week = {};
     DAYS.forEach(function(d){ week[d]={meal:null,sides:[]}; });
     if(weekRes.data) weekRes.data.forEach(function(row){ week[row.day]={meal:row.meals||null,sides:row.sides||[]}; });
-    history = histRes.data||[];
+    weekHistory = histRes.data||[];
     setSynced(); renderAll();
   } catch(e){ console.error(e); setError(); DAYS.forEach(function(d){ week[d]={meal:null,sides:[]}; }); renderAll(); }
 }
@@ -630,7 +630,7 @@ async function clearWeek(){
 async function saveToHistory(){
   var m=DAYS.map(function(d){ return week[d]&&week[d].meal; }).filter(Boolean); if(!m.length) return;
   var entry={week_label:'Week of '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),meals:m.map(function(x){ return x.name; }),sides:DAYS.reduce(function(acc,d){ if(week[d]&&week[d].sides&&week[d].sides.length) acc[d]=week[d].sides.map(function(s){ return s.name; }); return acc; },{})};
-  history.unshift(entry); await saveHistoryToDB(entry); await clearWeek(); showToast('Week saved! 🎉');
+  weekHistory.unshift(entry); await saveHistoryToDB(entry); await clearWeek(); showToast('Week saved! 🎉');
 }
 
 function toggleAddForm(){
@@ -671,11 +671,7 @@ function toggleAddForm(){
       +'</div>'
       +'<button class="btn btn-green" style="width:100%;padding:11px;font-size:14px;" onclick="addMeal()">Miam Miam! 🍽️</button>';
     document.getElementById('add-modal').classList.add('visible');
-    setTimeout(function(){
-      document.getElementById('new-name').focus();
-      selectCat('meat');
-      selectCuisine('france');
-    },50);
+    setTimeout(function(){ document.getElementById('new-name').focus(); selectCat('meat'); selectCuisine('france'); },50);
   } else {
     document.getElementById('modal-title').textContent='Add ingredient';
     document.getElementById('modal-body').innerHTML=
@@ -688,25 +684,14 @@ function toggleAddForm(){
 }
 function selectCat(cat){
   document.getElementById('new-cat').value=cat;
-  ['meat','veggie','fish'].forEach(function(c){
-    var btn=document.getElementById('cat-btn-'+c);
-    if(btn) btn.classList.toggle('selected',c===cat);
-  });
+  ['meat','veggie','fish'].forEach(function(c){ var btn=document.getElementById('cat-btn-'+c); if(btn) btn.classList.toggle('selected',c===cat); });
 }
 function selectCuisine(id){
   document.getElementById('new-cuisine').value=id;
-  CUISINES.forEach(function(c){
-    var btn=document.getElementById('cuis-btn-'+c.id);
-    if(btn) btn.classList.toggle('selected',c.id===id);
-  });
+  CUISINES.forEach(function(c){ var btn=document.getElementById('cuis-btn-'+c.id); if(btn) btn.classList.toggle('selected',c.id===id); });
 }
-function closeModal(){
-  document.getElementById('add-modal').classList.remove('visible');
-  document.getElementById('modal-body').innerHTML='';
-}
-function handleModalClick(e){
-  if(e.target===document.getElementById('add-modal')) closeModal();
-}
+function closeModal(){ document.getElementById('add-modal').classList.remove('visible'); document.getElementById('modal-body').innerHTML=''; }
+function handleModalClick(e){ if(e.target===document.getElementById('add-modal')) closeModal(); }
 
 async function addMeal(){
   var name=document.getElementById('new-name').value.trim(); if(!name) return;
@@ -736,8 +721,8 @@ function renderShop(){
 
 function renderHistory(){
   var el=document.getElementById('history-list');
-  if(!history.length){ el.innerHTML='<div class="empty-state">No saved weeks yet.</div>'; return; }
-  el.innerHTML=history.map(function(h){
+  if(!weekHistory.length){ el.innerHTML='<div class="empty-state">No saved weeks yet.</div>'; return; }
+  el.innerHTML=weekHistory.map(function(h){
     return '<div class="history-row"><div style="font-size:11px;color:#999;margin-bottom:4px;">'+(h.week_label||h.week||'')+'</div>'
       +'<div style="font-size:13px;font-weight:500;">'+(h.meals||[]).join(' · ')+'</div>'
       +(h.sides&&Object.keys(h.sides).length?'<div style="font-size:11px;color:#aaa;margin-top:4px;">'+Object.entries(h.sides).map(function(e){ return e[0]+': '+e[1].join(', '); }).join(' · ')+'</div>':'')
@@ -756,7 +741,7 @@ function closeNestor(){ document.getElementById('nestor-modal').classList.remove
 function handleNestorClick(e){ if(e.target===document.getElementById('nestor-modal')) closeNestor(); }
 
 async function fetchNestorSuggestions(){
-  var historyMeals=history.slice(0,8).map(function(h){ return (h.meals||[]).join(', '); }).join(' | ');
+  var historyMeals=weekHistory.slice(0,8).map(function(h){ return (h.meals||[]).join(', '); }).join(' | ');
   var libraryMeals=meals.map(function(m){ return m.name+' ('+MEAL_CATS[m.cat]+', '+getCuisine(m.cuisine).label+')'; }).join(', ');
   var currentWeek=DAYS.map(function(d){ return week[d]&&week[d].meal?week[d].meal.name:null; }).filter(Boolean).join(', ');
   var prompt='You are Nestor, a friendly French family meal planner assistant. '
@@ -774,7 +759,16 @@ async function fetchNestorSuggestions(){
     +'Respond ONLY with a valid JSON array, no markdown, no explanation:\n'
     +'[{"name":"Meal name","reason":"Brief reason","cat":"meat|fish|veggie","cuisine":"france|america|asia|europa"}]';
   try {
-    var response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    var response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':'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',
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
     var data=await response.json();
     var text=data.content&&data.content[0]?data.content[0].text:'';
     nestorSuggestions=JSON.parse(text.replace(/```json|```/g,'').trim());
