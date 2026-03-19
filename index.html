@@ -811,6 +811,13 @@ function renderHistory(){
 var nestorSuggestions = [];
 
 function openNestor(){
+  var key=getApiKey();
+  if(!key){
+    document.getElementById('nestor-modal').classList.add('visible');
+    document.getElementById('nestor-body').innerHTML='<div class="nestor-loading" style="color:#b91c1c;">No API key found! Click ⚙️ in the header to add your Anthropic API key first.</div>';
+    document.getElementById('nestor-sub').textContent='Setup required';
+    return;
+  }
   document.getElementById('nestor-modal').classList.add('visible');
   document.getElementById('nestor-body').innerHTML='<div class="nestor-loading">Nestor réfléchit<span class="nestor-loading-dots"></span></div>';
   document.getElementById('nestor-sub').textContent='Basé sur votre historique et vos préférences';
