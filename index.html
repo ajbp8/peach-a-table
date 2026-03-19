@@ -94,8 +94,8 @@
     .inline-form.info { background: #eff6ff; border-color: #93c5fd; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
     .form-row.full { grid-template-columns: 1fr; }
-    input[type=text], select { width: 100%; padding: 7px 9px; border-radius: 8px; border: 1px solid #e5e5e5; background: white; color: #1a1a1a; font-size: 12px; font-family: inherit; }
-    input[type=text]:focus, select:focus { outline: none; border-color: #aaa; }
+    input[type=text], input[type=password], select { width: 100%; padding: 7px 9px; border-radius: 8px; border: 1px solid #e5e5e5; background: white; color: #1a1a1a; font-size: 12px; font-family: inherit; }
+    input[type=text]:focus, input[type=password]:focus, select:focus { outline: none; border-color: #aaa; }
     .summary-bar { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
     .summary-chip { font-size: 11px; padding: 3px 9px; border-radius: 99px; background: #f5f5f5; color: #666; border: 1px solid #e5e5e5; }
     .scroll-list { max-height: 420px; overflow-y: auto; padding-right: 2px; }
@@ -125,6 +125,8 @@
     .btn-green:hover { background: #15803d; }
     .nestor-btn { background: none; border: none; cursor: pointer; font-size: 28px; line-height: 1; padding: 2px 4px; transition: transform 0.2s; flex-shrink: 0; }
     .nestor-btn:hover { transform: scale(1.15); }
+    .settings-btn { background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 4px; color: #aaa; transition: color 0.2s; flex-shrink: 0; }
+    .settings-btn:hover { color: #666; }
     .nestor-modal { background: white; border-radius: 14px; padding: 1.25rem; width: 100%; max-width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
     .nestor-greeting { font-size: 16px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
     .nestor-sub { font-size: 12px; color: #999; margin-bottom: 16px; }
@@ -155,6 +157,7 @@
     <div class="header-title">PEACH à Table!</div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <button class="nestor-btn" onclick="openNestor()" title="Ask Nestor for ideas">👨‍🍳</button>
+      <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
       <div class="sync-badge"><div class="dot" id="sync-dot"></div><span id="sync-label">Connecting…</span></div>
       <div class="tabs">
         <button class="tab active" onclick="showTab('plan')">Plan</button>
@@ -225,6 +228,8 @@
     </div>
   </div>
 </div>
+
+<!-- Add meal modal -->
 <div class="modal-overlay" id="add-modal" onclick="handleModalClick(event)">
   <div class="modal">
     <div class="modal-header">
@@ -234,6 +239,28 @@
     <div id="modal-body"></div>
   </div>
 </div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settings-modal" onclick="handleSettingsClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Settings</div>
+      <button class="modal-close" onclick="closeSettings()">×</button>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Anthropic API Key</div>
+      <div style="font-size:11px;color:#888;margin-bottom:10px;">Required for Nestor 👨‍🍳 — stored only in your browser, never sent to GitHub. Get yours at <a href="https://console.anthropic.com" target="_blank" style="color:#3b82f6;">console.anthropic.com</a></div>
+      <input type="password" id="api-key-input" placeholder="sk-ant-api03-…" style="margin-bottom:10px;">
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="saveApiKey()">Save key</button>
+        <button class="btn btn-danger btn-sm" onclick="clearApiKey()">Clear</button>
+      </div>
+      <div id="api-key-status" style="font-size:11px;margin-top:8px;color:#888;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Nestor modal -->
 <div class="modal-overlay" id="nestor-modal" onclick="handleNestorClick(event)">
   <div class="nestor-modal">
     <div class="modal-header">
@@ -249,6 +276,7 @@
     <div id="nestor-body"></div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -317,6 +345,29 @@ function setSynced(){  document.getElementById('sync-dot').className='dot';     
 function setError(){   document.getElementById('sync-dot').className='dot error';   document.getElementById('sync-label').textContent='Offline'; }
 function showToast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); },2500); }
 function isTouchDevice(){ return 'ontouchstart' in window; }
+
+// ── SETTINGS / API KEY ────────────────────────────────────────────
+function openSettings(){
+  var existing=localStorage.getItem('peach_anthropic_key')||'';
+  document.getElementById('api-key-input').value=existing;
+  document.getElementById('api-key-status').textContent=existing?'✅ Key saved in browser':'No key saved yet';
+  document.getElementById('settings-modal').classList.add('visible');
+}
+function closeSettings(){ document.getElementById('settings-modal').classList.remove('visible'); }
+function handleSettingsClick(e){ if(e.target===document.getElementById('settings-modal')) closeSettings(); }
+function saveApiKey(){
+  var key=document.getElementById('api-key-input').value.trim();
+  if(!key){ document.getElementById('api-key-status').textContent='⚠️ Please enter a key'; return; }
+  localStorage.setItem('peach_anthropic_key', key);
+  document.getElementById('api-key-status').textContent='✅ Key saved in your browser!';
+  setTimeout(closeSettings, 1000);
+}
+function clearApiKey(){
+  localStorage.removeItem('peach_anthropic_key');
+  document.getElementById('api-key-input').value='';
+  document.getElementById('api-key-status').textContent='Key cleared';
+}
+function getApiKey(){ return localStorage.getItem('peach_anthropic_key')||''; }
 
 async function loadFromDB(){
   try {
@@ -420,9 +471,7 @@ function highlight(text,q){ var idx=text.toLowerCase().indexOf(q); if(idx===-1) 
 function clearSearch(){ document.getElementById('meal-search').value=''; document.getElementById('search-results').innerHTML=''; document.getElementById('search-clear-btn').style.display='none'; }
 
 function getWeekDates(){
-  var now=new Date();
-  var day=now.getDay();
-  var mon=new Date(now);
+  var now=new Date(); var day=now.getDay(); var mon=new Date(now);
   mon.setDate(now.getDate()-(day===0?6:day-1));
   return DAYS.map(function(_,i){
     var d=new Date(mon); d.setDate(mon.getDate()+i);
@@ -431,8 +480,7 @@ function getWeekDates(){
 }
 
 function renderWeekGrid(){
-  var touch=isTouchDevice();
-  var dates=getWeekDates();
+  var touch=isTouchDevice(); var dates=getWeekDates();
   document.getElementById('week-grid').innerHTML=DAYS.map(function(d,di){
     var day=week[d]||{meal:null,sides:[]}; var meal=day.meal; var sides=day.sides||[];
     var c=meal?getCuisine(meal.cuisine):null;
@@ -506,9 +554,7 @@ function renderMealLib(){
   var touch=isTouchDevice();
   var assigned=new Set(DAYS.map(function(d){ return week[d]&&week[d].meal?week[d].meal.id:null; }).filter(Boolean));
   var list=meals.filter(function(m){
-    var cMatch=cuisineFilter==='all'||m.cuisine===cuisineFilter;
-    var catMatch=catFilter==='all'||m.cat===catFilter;
-    return cMatch&&catMatch;
+    return (cuisineFilter==='all'||m.cuisine===cuisineFilter)&&(catFilter==='all'||m.cat===catFilter);
   }).slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
   if(!list.length){ document.getElementById('lib-list').innerHTML='<div class="empty-state">No meals match</div>'; return; }
   var html='';
@@ -558,8 +604,7 @@ function renderMealEditForm(m){
     +'<div class="form-row"><select id="edit-cat">'+Object.entries(MEAL_CATS).map(function(e){ return '<option value="'+e[0]+'"'+(m.cat===e[0]?' selected':'')+'>'+e[1]+'</option>'; }).join('')+'</select></div>'
     +'<div class="form-row full"><select id="edit-cuisine">'+CUISINES.map(function(c){ return '<option value="'+c.id+'"'+(m.cuisine===c.id?' selected':'')+'>'+c.flag+' '+c.label+'</option>'; }).join('')+'</select></div>'
     +'<div class="form-row full"><input type="text" id="edit-url" value="'+(m.url||'')+'" placeholder="Recipe URL — YouTube, Instagram, web…"></div>'
-    +'<div style="display:flex;gap:5px;margin-top:4px;"><button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveMealEdit(\''+m.id+'\')">Save</button><button class="btn btn-sm" onclick="cancelEdit()">Cancel</button></div>'
-    +'</div>';
+    +'<div style="display:flex;gap:5px;margin-top:4px;"><button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveMealEdit(\''+m.id+'\')">Save</button><button class="btn btn-sm" onclick="cancelEdit()">Cancel</button></div></div>';
 }
 function renderIngEditForm(i){
   return '<div class="inline-form info"><div class="form-row full"><input type="text" id="edit-name" value="'+i.name+'"></div>'
@@ -586,21 +631,13 @@ async function confirmDeleteItem(type,id){
 }
 async function saveMealEdit(id){
   var idx=meals.findIndex(function(m){ return m.id===id; }); if(idx===-1) return;
-  meals[idx]=Object.assign({},meals[idx],{
-    name:document.getElementById('edit-name').value.trim()||meals[idx].name,
-    cat:document.getElementById('edit-cat').value,
-    cuisine:document.getElementById('edit-cuisine').value,
-    url:document.getElementById('edit-url').value.trim()
-  });
+  meals[idx]=Object.assign({},meals[idx],{name:document.getElementById('edit-name').value.trim()||meals[idx].name,cat:document.getElementById('edit-cat').value,cuisine:document.getElementById('edit-cuisine').value,url:document.getElementById('edit-url').value.trim()});
   DAYS.forEach(function(d){ if(week[d]&&week[d].meal&&week[d].meal.id===id){ week[d].meal=meals[idx]; saveDayToDB(d); } });
   await saveMealToDB(meals[idx]); editingId=null; renderAll();
 }
 async function saveIngEdit(id){
   var idx=ingredients.findIndex(function(i){ return i.id===id; }); if(idx===-1) return;
-  ingredients[idx]=Object.assign({},ingredients[idx],{
-    name:document.getElementById('edit-name').value.trim()||ingredients[idx].name,
-    cat:document.getElementById('edit-cat').value
-  });
+  ingredients[idx]=Object.assign({},ingredients[idx],{name:document.getElementById('edit-name').value.trim()||ingredients[idx].name,cat:document.getElementById('edit-cat').value});
   DAYS.forEach(function(d){ if(week[d]&&week[d].sides) week[d].sides=week[d].sides.map(function(s){ return s.id===id?ingredients[idx]:s; }); });
   localStorage.setItem('peach_ingredients',JSON.stringify(ingredients));
   editingId=null; renderAll();
@@ -638,37 +675,16 @@ function toggleAddForm(){
   if(libTab==='meals'){
     document.getElementById('modal-title').textContent='Add meal';
     document.getElementById('modal-body').innerHTML=
-      '<div class="modal-step" style="margin-bottom:16px;">'
-        +'<div class="step-num">1</div>'
-        +'<div class="step-content"><input type="text" id="new-name" placeholder="Meal name" style="width:100%;padding:12px 14px;font-size:15px;"></div>'
-      +'</div>'
-      +'<div class="modal-step" style="margin-bottom:8px;">'
-        +'<div class="step-num" style="margin-top:4px;">2</div>'
-        +'<div class="step-content">'
-          +'<div style="display:flex;gap:5px;">'
-            +['meat','veggie','fish'].map(function(cat){
-              return '<button class="cuisine-btn" id="cat-btn-'+cat+'" onclick="selectCat(\''+cat+'\')" style="flex:1;justify-content:center;padding:5px 6px;">'
-                +'<span class="cat-badge cat-'+cat+'" style="pointer-events:none;">'+MEAL_CATS[cat]+'</span>'
-              +'</button>';
-            }).join('')
-          +'</div>'
-          +'<input type="hidden" id="new-cat" value="meat">'
-        +'</div>'
-      +'</div>'
-      +'<div class="modal-step" style="margin-bottom:16px;">'
-        +'<div class="step-num" style="margin-top:4px;">3</div>'
-        +'<div class="step-content">'
-          +'<div class="cuisine-picker">'
-            +CUISINES.map(function(c){
-              return '<button class="cuisine-btn" id="cuis-btn-'+c.id+'" onclick="selectCuisine(\''+c.id+'\')" style="padding:5px 8px;">'
-                +'<img src="'+c.img+'" style="width:18px;height:auto;border-radius:2px;" alt="'+c.flag+'">'
-                +'<span style="font-size:11px;">'+c.label+'</span>'
-              +'</button>';
-            }).join('')
-          +'</div>'
-          +'<input type="hidden" id="new-cuisine" value="france">'
-        +'</div>'
-      +'</div>'
+      '<div class="modal-step" style="margin-bottom:16px;"><div class="step-num">1</div>'
+        +'<div class="step-content"><input type="text" id="new-name" placeholder="Meal name" style="width:100%;padding:12px 14px;font-size:15px;"></div></div>'
+      +'<div class="modal-step" style="margin-bottom:8px;"><div class="step-num" style="margin-top:4px;">2</div>'
+        +'<div class="step-content"><div style="display:flex;gap:5px;">'
+          +['meat','veggie','fish'].map(function(cat){ return '<button class="cuisine-btn" id="cat-btn-'+cat+'" onclick="selectCat(\''+cat+'\')" style="flex:1;justify-content:center;padding:5px 6px;"><span class="cat-badge cat-'+cat+'" style="pointer-events:none;">'+MEAL_CATS[cat]+'</span></button>'; }).join('')
+        +'</div><input type="hidden" id="new-cat" value="meat"></div></div>'
+      +'<div class="modal-step" style="margin-bottom:16px;"><div class="step-num" style="margin-top:4px;">3</div>'
+        +'<div class="step-content"><div class="cuisine-picker">'
+          +CUISINES.map(function(c){ return '<button class="cuisine-btn" id="cuis-btn-'+c.id+'" onclick="selectCuisine(\''+c.id+'\')" style="padding:5px 8px;"><img src="'+c.img+'" style="width:18px;height:auto;border-radius:2px;" alt="'+c.flag+'"><span style="font-size:11px;">'+c.label+'</span></button>'; }).join('')
+        +'</div><input type="hidden" id="new-cuisine" value="france"></div></div>'
       +'<button class="btn btn-green" style="width:100%;padding:11px;font-size:14px;" onclick="addMeal()">Miam Miam! 🍽️</button>';
     document.getElementById('add-modal').classList.add('visible');
     setTimeout(function(){ document.getElementById('new-name').focus(); selectCat('meat'); selectCuisine('france'); },50);
@@ -682,14 +698,8 @@ function toggleAddForm(){
     setTimeout(function(){ document.getElementById('new-name').focus(); },50);
   }
 }
-function selectCat(cat){
-  document.getElementById('new-cat').value=cat;
-  ['meat','veggie','fish'].forEach(function(c){ var btn=document.getElementById('cat-btn-'+c); if(btn) btn.classList.toggle('selected',c===cat); });
-}
-function selectCuisine(id){
-  document.getElementById('new-cuisine').value=id;
-  CUISINES.forEach(function(c){ var btn=document.getElementById('cuis-btn-'+c.id); if(btn) btn.classList.toggle('selected',c.id===id); });
-}
+function selectCat(cat){ document.getElementById('new-cat').value=cat; ['meat','veggie','fish'].forEach(function(c){ var b=document.getElementById('cat-btn-'+c); if(b) b.classList.toggle('selected',c===cat); }); }
+function selectCuisine(id){ document.getElementById('new-cuisine').value=id; CUISINES.forEach(function(c){ var b=document.getElementById('cuis-btn-'+c.id); if(b) b.classList.toggle('selected',c.id===id); }); }
 function closeModal(){ document.getElementById('add-modal').classList.remove('visible'); document.getElementById('modal-body').innerHTML=''; }
 function handleModalClick(e){ if(e.target===document.getElementById('add-modal')) closeModal(); }
 
@@ -732,50 +742,48 @@ function renderHistory(){
 
 // ── NESTOR ────────────────────────────────────────────────────────
 function openNestor(){
+  var key=getApiKey();
+  if(!key){
+    document.getElementById('nestor-modal').classList.add('visible');
+    document.getElementById('nestor-body').innerHTML='<div class="nestor-loading" style="color:#b91c1c;">No API key found! Click ⚙️ in the header to add your Anthropic API key first.</div>';
+    document.getElementById('nestor-sub').textContent='Setup required';
+    return;
+  }
   document.getElementById('nestor-modal').classList.add('visible');
   document.getElementById('nestor-body').innerHTML='<div class="nestor-loading">Nestor réfléchit<span class="nestor-loading-dots"></span></div>';
   document.getElementById('nestor-sub').textContent='Basé sur votre historique et vos préférences';
-  fetchNestorSuggestions();
+  fetchNestorSuggestions(key);
 }
 function closeNestor(){ document.getElementById('nestor-modal').classList.remove('visible'); }
 function handleNestorClick(e){ if(e.target===document.getElementById('nestor-modal')) closeNestor(); }
 
-async function fetchNestorSuggestions(){
+async function fetchNestorSuggestions(key){
   var historyMeals=weekHistory.slice(0,8).map(function(h){ return (h.meals||[]).join(', '); }).join(' | ');
   var libraryMeals=meals.map(function(m){ return m.name+' ('+MEAL_CATS[m.cat]+', '+getCuisine(m.cuisine).label+')'; }).join(', ');
   var currentWeek=DAYS.map(function(d){ return week[d]&&week[d].meal?week[d].meal.name:null; }).filter(Boolean).join(', ');
-  var prompt='You are Nestor, a friendly French family meal planner assistant. '
-    +'Based on this family\'s meal history and preferences, suggest exactly 6 new meal ideas.\n\n'
-    +'Their meal library: '+libraryMeals+'\n'
-    +'Recent weeks: '+(historyMeals||'No history yet')+'\n'
-    +'This week already planned: '+(currentWeek||'Nothing yet')+'\n\n'
-    +'Rules:\n- Suggest meals the family would enjoy based on their taste profile\n'
-    +'- Mix familiar favourites with 1-2 creative new ideas\n'
-    +'- Include variety: different cuisines, different protein types\n'
-    +'- Avoid repeating what\'s already planned this week\n'
-    +'- Each meal must have a brief reason (max 12 words) why you suggest it\n'
-    +'- Detect the most likely category: meat, fish, or veggie\n'
-    +'- Detect the most likely cuisine: france, america, asia, or europa\n\n'
-    +'Respond ONLY with a valid JSON array, no markdown, no explanation:\n'
-    +'[{"name":"Meal name","reason":"Brief reason","cat":"meat|fish|veggie","cuisine":"france|america|asia|europa"}]';
+  var prompt='You are Nestor, a friendly French family meal planner assistant. Based on this family\'s meal history and preferences, suggest exactly 6 new meal ideas.\n\n'
+    +'Their meal library: '+libraryMeals+'\nRecent weeks: '+(historyMeals||'No history yet')+'\nThis week already planned: '+(currentWeek||'Nothing yet')+'\n\n'
+    +'Rules:\n- Suggest meals the family would enjoy based on their taste profile\n- Mix familiar favourites with 1-2 creative new ideas\n- Include variety: different cuisines, different protein types\n- Avoid repeating what\'s already planned this week\n- Each meal must have a brief reason (max 12 words) why you suggest it\n- Detect the most likely category: meat, fish, or veggie\n- Detect the most likely cuisine: france, america, asia, or europa\n\n'
+    +'Respond ONLY with a valid JSON array, no markdown, no explanation:\n[{"name":"Meal name","reason":"Brief reason","cat":"meat|fish|veggie","cuisine":"france|america|asia|europa"}]';
   try {
     var response=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'x-api-key':'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',
+        'x-api-key':key,
         'anthropic-version':'2023-06-01',
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
     });
     var data=await response.json();
+    if(data.type==='error'){ throw new Error(data.error.message); }
     var text=data.content&&data.content[0]?data.content[0].text:'';
     nestorSuggestions=JSON.parse(text.replace(/```json|```/g,'').trim());
     renderNestorSuggestions();
   } catch(e){
     console.error(e);
-    document.getElementById('nestor-body').innerHTML='<div class="nestor-loading">Nestor a un petit problème... réessayez! 🤷</div>';
+    document.getElementById('nestor-body').innerHTML='<div class="nestor-loading" style="color:#b91c1c;">Erreur: '+e.message+'<br><br>Check your API key in ⚙️ Settings.</div>';
   }
 }
 
@@ -784,12 +792,11 @@ function renderNestorSuggestions(){
     var googleUrl='https://www.google.com/search?q='+encodeURIComponent(s.name+' recipe');
     return '<div class="nestor-card" id="nestor-card-'+i+'">'
       +'<input class="nestor-meal-input" id="nestor-name-'+i+'" value="'+s.name+'" type="text">'
-      +'<div class="nestor-cat-row"><span class="cat-badge cat-'+s.cat+'">'+MEAL_CATS[s.cat]+'</span>'
-      +'<span style="font-size:13px;">'+getCuisine(s.cuisine).flag+'</span></div>'
+      +'<div class="nestor-cat-row"><span class="cat-badge cat-'+s.cat+'">'+MEAL_CATS[s.cat]+'</span><span style="font-size:13px;">'+getCuisine(s.cuisine).flag+'</span></div>'
       +'<div class="nestor-reason">💡 '+s.reason+'</div>'
       +'<div class="nestor-footer"><a class="nestor-recipe-link" href="'+googleUrl+'" target="_blank">🔍 Find recipe online</a>'
-      +'<button class="nestor-add-btn" id="nestor-btn-'+i+'" onclick="addNestorMeal('+i+')">+ Add to PEACH</button>'
-      +'</div></div>';
+      +'<button class="nestor-add-btn" id="nestor-btn-'+i+'" onclick="addNestorMeal('+i+')">+ Add to PEACH</button></div>'
+      +'</div>';
   }).join('');
   document.getElementById('nestor-body').innerHTML=html;
   document.getElementById('nestor-sub').textContent='6 idées pour votre famille · modifiez le nom si besoin';
