@@ -69,11 +69,14 @@
     .day-picker-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
     .day-picker-sub { font-size: 11px; color: #888; margin-bottom: 14px; }
     .day-picker-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin-bottom: 10px; }
-    .day-picker-btn { padding: 10px 4px; border: 1px solid #e5e5e5; border-radius: 8px; background: white; cursor: pointer; font-family: inherit; text-align: center; transition: all 0.12s; }
-    .day-picker-btn:hover { border-color: #1a1a1a; background: #f5f5f5; }
+    .day-picker-btn { padding: 10px 4px; border: 1.5px solid #e5e5e5; border-radius: 8px; background: white; cursor: pointer; font-family: inherit; text-align: center; transition: all 0.12s; }
+    .day-picker-btn:hover:not(:disabled) { border-color: #1a1a1a; background: #f5f5f5; }
     .day-picker-btn.taken { opacity: 0.35; cursor: not-allowed; }
-    .day-picker-btn .dpday { font-size: 10px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
-    .day-picker-btn .dpdate { font-size: 9px; color: #bbb; margin-top: 1px; }
+    .day-picker-btn.selected { border-color: #16a34a; background: #f0fdf4; }
+    .day-picker-btn .dpday { font-size: 11px; font-weight: 700; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.5px; }
+    .day-picker-btn .dpdate { font-size: 10px; color: #666; margin-top: 2px; }
+    .day-picker-btn.selected .dpday { color: #16a34a; }
+    .day-picker-btn.selected .dpdate { color: #16a34a; }
     .side-picker-grid { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
     .side-picker-btn { padding: 10px 14px; border: 1px solid #e5e5e5; border-radius: 8px; background: white; cursor: pointer; font-family: inherit; text-align: left; font-size: 13px; transition: all 0.12s; display: flex; justify-content: space-between; align-items: center; }
     .side-picker-btn:hover { border-color: #1a1a1a; background: #f5f5f5; }
@@ -280,7 +283,6 @@
       <button class="modal-close" onclick="cancelTouchSelect()">×</button>
     </div>
     <div id="day-picker-body"></div>
-    <button class="btn" style="width:100%;font-size:12px;" onclick="cancelTouchSelect()">Cancel</button>
   </div>
 </div>
 
@@ -362,6 +364,7 @@ var confirmDeleteId = null;
 var addOpen = false;
 var touchSelected = null;
 var touchType = null;
+var selectedPickerDay = null;
 
 // ── HELPERS ───────────────────────────────────────────────────────
 function getCuisine(id){ return CUISINES.find(c=>c.id===id)||{flag:'',label:id}; }
@@ -457,10 +460,11 @@ function renderAll(){ renderSearch(); renderWeekGrid(); renderLib(); renderSumma
 // ── TOUCH SELECT ──────────────────────────────────────────────────
 function startTouchSelect(item, type){
   touchSelected=item; touchType=type;
+  selectedPickerDay=null;
   openDayPicker();
 }
 function cancelTouchSelect(){
-  touchSelected=null; touchType=null;
+  touchSelected=null; touchType=null; selectedPickerDay=null;
   document.getElementById('day-picker-modal').classList.remove('visible');
   document.getElementById('touch-banner').classList.remove('visible');
   renderWeekGrid(); renderLib();
@@ -472,54 +476,67 @@ function openDayPicker(){
   var isMeal=touchType==='meal';
   document.getElementById('day-picker-title').textContent=isMeal?'Which day?':'Which day\'s sides?';
   document.getElementById('day-picker-sub').textContent='"'+touchSelected.name+'"';
+  renderDayPickerBody(dates, isMeal);
+  document.getElementById('day-picker-modal').classList.add('visible');
+}
 
+function renderDayPickerBody(dates, isMeal){
+  if(!dates) dates=getWeekDates();
+  if(isMeal===undefined) isMeal=touchType==='meal';
+  var html='';
   if(isMeal){
-    // Show 5 day buttons
-    var html='<div class="day-picker-grid">';
+    html+='<div class="day-picker-grid">';
     DAYS.forEach(function(d,i){
       var taken=week[d]&&week[d].meal;
-      html+='<button class="day-picker-btn'+(taken?' taken':'')+'" '
-        +(taken?'disabled':'onclick="pickDay(\''+d+'\')"')+'>'
+      var sel=selectedPickerDay===d;
+      html+='<button class="day-picker-btn'+(taken?' taken':sel?' selected':'')+'" '
+        +(taken?'disabled':'onclick="selectPickerDay(\''+d+'\')"')+'>'
         +'<div class="dpday">'+d+'</div>'
         +'<div class="dpdate">'+dates[i]+'</div>'
         +(taken?'<div style="font-size:9px;color:#ccc;margin-top:2px;">taken</div>':'')
       +'</button>';
     });
     html+='</div>';
-    document.getElementById('day-picker-body').innerHTML=html;
   } else {
-    // Show 5 day buttons for sides — all days available
-    var html2='<div class="side-picker-grid">';
+    html+='<div class="side-picker-grid">';
     DAYS.forEach(function(d,i){
       var meal=week[d]&&week[d].meal?week[d].meal.name:'';
-      html2+='<button class="side-picker-btn" onclick="pickDaySide(\''+d+'\')">'
-        +'<div><div class="dpday" style="font-size:11px;font-weight:600;color:#1a1a1a;">'+d+' <span style="color:#bbb;font-weight:400;">'+dates[i]+'</span></div>'
-        +(meal?'<div class="side-meal">'+meal+'</div>':'<div class="side-meal">No meal yet</div>')+'</div>'
-        +'<span style="color:#ccc;font-size:16px;">→</span>'
+      var sel=selectedPickerDay===d;
+      html+='<button class="side-picker-btn'+(sel?' selected':'')+'" onclick="selectPickerDay(\''+d+'\')" style="'+(sel?'border-color:#16a34a;background:#f0fdf4;':'')+'">'
+        +'<div><div style="font-size:11px;font-weight:700;color:'+(sel?'#16a34a':'#1a1a1a')+';">'+d+' <span style="font-weight:400;color:#888;">'+dates[i]+'</span></div>'
+        +(meal?'<div class="side-meal">'+meal+'</div>':'<div class="side-meal" style="color:#ccc;">No meal yet</div>')+'</div>'
+        +'<span style="color:'+(sel?'#16a34a':'#ccc')+';font-size:16px;">'+(sel?'✓':'→')+'</span>'
       +'</button>';
     });
-    html2+='</div>';
-    document.getElementById('day-picker-body').innerHTML=html2;
+    html+='</div>';
   }
-  document.getElementById('day-picker-modal').classList.add('visible');
+  html+='<button class="btn'+(selectedPickerDay?' btn-green':'')+'" style="width:100%;font-size:13px;font-weight:600;padding:10px;margin-top:4px;transition:all 0.15s;" onclick="confirmDayPick()">'
+    +(selectedPickerDay?'Let\'s go! 🍽️':'Select a day first')+'</button>';
+  document.getElementById('day-picker-body').innerHTML=html;
 }
 
-async function pickDay(day){
-  if(!touchSelected) return;
-  if(!week[day]) week[day]={meal:null,sides:[]};
-  week[day].meal=touchSelected;
-  document.getElementById('day-picker-modal').classList.remove('visible');
-  touchSelected=null; touchType=null;
-  renderAll(); await saveDayToDB(day); showToast('Added to '+day+'! 🍽️');
+function selectPickerDay(day){
+  selectedPickerDay=day;
+  renderDayPickerBody();
 }
-async function pickDaySide(day){
-  if(!touchSelected) return;
+
+async function confirmDayPick(){
+  if(!selectedPickerDay||!touchSelected) return;
+  var day=selectedPickerDay;
   if(!week[day]) week[day]={meal:null,sides:[]};
-  if(!week[day].sides.some(function(s){ return s.id===touchSelected.id; })) week[day].sides.push(touchSelected);
+  if(touchType==='meal'){
+    week[day].meal=touchSelected;
+  } else {
+    if(!week[day].sides.some(function(s){ return s.id===touchSelected.id; })) week[day].sides.push(touchSelected);
+  }
+  var name=touchSelected.name;
   document.getElementById('day-picker-modal').classList.remove('visible');
-  touchSelected=null; touchType=null;
-  renderAll(); await saveDayToDB(day); showToast(touchSelected?touchSelected.name+' added!':'Added!');
+  touchSelected=null; touchType=null; selectedPickerDay=null;
+  renderAll(); await saveDayToDB(day); showToast(name+' added to '+day+'! 🍽️');
 }
+
+function pickDay(day){ selectPickerDay(day); }
+function pickDaySide(day){ selectPickerDay(day); }
 
 async function assignTouchToDay(day, zone){
   if(!touchSelected) return;
