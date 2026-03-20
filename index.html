@@ -833,16 +833,29 @@ function toggleAddForm(){
   if(libTab==='meals'){
     document.getElementById('modal-title').textContent='Add meal';
     document.getElementById('modal-body').innerHTML=
-      '<div class="modal-step" style="margin-bottom:16px;">'
-        +'<div class="step-num">1</div>'
-        +'<div class="step-content"><input type="text" id="new-name" placeholder="Meal name" style="width:100%;padding:12px 14px;font-size:15px;"></div>'
+      '<div style="background:#f9f9f9;border:1px solid #e5e5e5;border-radius:10px;padding:12px;margin-bottom:14px;">'
+        +'<div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Import from a recipe site</div>'
+        +'<div style="display:flex;gap:6px;">'
+          +'<input type="text" id="extract-url" placeholder="Paste any recipe URL…" style="flex:1;font-size:12px;">'
+          +'<button class="btn btn-primary btn-sm" onclick="extractFromUrl()" id="extract-btn" style="white-space:nowrap;flex-shrink:0;">Extract 🔍</button>'
+        +'</div>'
+        +'<div id="extract-status" style="font-size:11px;color:#888;margin-top:6px;min-height:16px;"></div>'
       +'</div>'
-      +'<div class="modal-step" style="margin-bottom:8px;">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">'
+        +'<div style="flex:1;height:1px;background:#e5e5e5;"></div>'
+        +'<div style="font-size:11px;color:#bbb;">or fill in manually</div>'
+        +'<div style="flex:1;height:1px;background:#e5e5e5;"></div>'
+      +'</div>'
+      +'<div class="modal-step" style="margin-bottom:14px;">'
+        +'<div class="step-num">1</div>'
+        +'<div class="step-content"><input type="text" id="new-name" placeholder="Meal name" style="width:100%;padding:10px 12px;font-size:14px;"></div>'
+      +'</div>'
+      +'<div class="modal-step" style="margin-bottom:10px;">'
         +'<div class="step-num" style="margin-top:4px;">2</div>'
         +'<div class="step-content">'
           +'<div style="display:flex;gap:5px;">'
             +['meat','veggie','fish'].map(function(cat){
-              return '<button class="cuisine-btn" id="cat-btn-'+cat+'" onclick="selectCat(\''+cat+'\')" style="flex:1;justify-content:center;padding:5px 6px;">'
+              return '<button class="cuisine-btn" id="cat-btn-'+cat+'" onclick="selectCat(\'' +cat+ '\')" style="flex:1;justify-content:center;padding:5px 6px;">'
                 +'<span class="cat-badge cat-'+cat+'" style="pointer-events:none;">'+MEAL_CATS[cat]+'</span>'
               +'</button>';
             }).join('')
@@ -850,12 +863,12 @@ function toggleAddForm(){
           +'<input type="hidden" id="new-cat" value="meat">'
         +'</div>'
       +'</div>'
-      +'<div class="modal-step" style="margin-bottom:16px;">'
+      +'<div class="modal-step" style="margin-bottom:14px;">'
         +'<div class="step-num" style="margin-top:4px;">3</div>'
         +'<div class="step-content">'
           +'<div class="cuisine-picker">'
             +CUISINES.map(function(c){
-              return '<button class="cuisine-btn" id="cuis-btn-'+c.id+'" onclick="selectCuisine(\''+c.id+'\')" style="padding:5px 8px;">'
+              return '<button class="cuisine-btn" id="cuis-btn-'+c.id+'" onclick="selectCuisine(\'' +c.id+ '\')" style="padding:5px 8px;">'
                 +'<img src="'+c.img+'" style="width:18px;height:auto;border-radius:2px;" alt="'+c.flag+'">'
                 +'<span style="font-size:11px;">'+c.label+'</span>'
               +'</button>';
@@ -864,14 +877,16 @@ function toggleAddForm(){
           +'<input type="hidden" id="new-cuisine" value="france">'
         +'</div>'
       +'</div>'
-      +'<div style="margin-bottom:16px;"><input type="text" id="new-url" placeholder="🔗 Recipe URL — optional (YouTube, Instagram, web…)"></div>'
+      +'<div style="margin-bottom:14px;">'
+        +'<input type="text" id="new-url" placeholder="🔗 Recipe URL (auto-filled if extracted above)">'
+      +'</div>'
       +'<button class="btn btn-green" style="width:100%;padding:11px;font-size:14px;" onclick="addMeal()">Miam Miam! 🍽️</button>';
     document.getElementById('add-modal').classList.add('visible');
     setTimeout(function(){
       document.getElementById('new-name').focus();
       selectCat('meat');
       selectCuisine('france');
-    },50);
+    },50)
   } else {
     document.getElementById('modal-title').textContent='Add ingredient';
     document.getElementById('modal-body').innerHTML=
@@ -902,6 +917,51 @@ function closeModal(){
 }
 function handleModalClick(e){
   if(e.target===document.getElementById('add-modal')) closeModal();
+}
+
+async function extractFromUrl(){
+  var url=document.getElementById('extract-url').value.trim();
+  if(!url){ document.getElementById('extract-status').textContent='⚠️ Please paste a URL first'; return; }
+  var key=getApiKey();
+  if(!key){ document.getElementById('extract-status').textContent='⚠️ No API key — add it in ⚙️ Settings first'; return; }
+  var btn=document.getElementById('extract-btn');
+  btn.textContent='Extracting…'; btn.disabled=true;
+  document.getElementById('extract-status').textContent='Nestor is reading the recipe…';
+  var prompt='You are a recipe data extractor. Given a recipe URL, extract the meal information.\n\n'
+    +'URL: '+url+'\n\n'
+    +'Extract:\n'
+    +'1. A short, family-friendly meal name (max 5 words, in the language of the recipe)\n'
+    +'2. Category: meat, fish, or veggie\n'
+    +'3. Cuisine: france, america, asia, or europa\n\n'
+    +'Respond ONLY with valid JSON, no markdown:\n'
+    +'{"name":"Meal name","cat":"meat|fish|veggie","cuisine":"france|america|asia|europa"}';
+  try {
+    var response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,messages:[{role:'user',content:prompt}]})
+    });
+    var data=await response.json();
+    if(data.type==='error') throw new Error(data.error.message);
+    var text=data.content&&data.content[0]?data.content[0].text:'';
+    var extracted=JSON.parse(text.replace(/```json|```/g,'').trim());
+    // Fill in the form fields
+    document.getElementById('new-name').value=extracted.name||'';
+    document.getElementById('new-url').value=url;
+    if(extracted.cat) selectCat(extracted.cat);
+    if(extracted.cuisine) selectCuisine(extracted.cuisine);
+    document.getElementById('extract-status').innerHTML='✅ Extracted! Check the fields below and edit if needed.';
+    document.getElementById('extract-status').style.color='#16a34a';
+    btn.textContent='Re-extract 🔍'; btn.disabled=false;
+    document.getElementById('new-name').focus();
+    document.getElementById('new-name').select();
+  } catch(e){
+    console.error(e);
+    document.getElementById('extract-status').textContent='⚠️ Could not extract — fill in manually below';
+    document.getElementById('extract-status').style.color='#b91c1c';
+    document.getElementById('new-url').value=url;
+    btn.textContent='Extract 🔍'; btn.disabled=false;
+  }
 }
 
 async function addMeal(){
