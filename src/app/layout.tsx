@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import RegisterSW from "@/components/RegisterSW";
+import AuthSessionListener from "@/components/AuthSessionListener";
 
 export const metadata: Metadata = {
   title: "Memory Kitchen",
@@ -29,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased pb-16">
+        <AuthSessionListener />
         <RegisterSW />
         {children}
         <BottomNav />
