@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --mk-terracotta: #c8602a;
+  --mk-terracotta-light: #e8854a;
+  --mk-cream: #f7f4ef;
+  --mk-border: #e8e3db;
+
+  --background: var(--mk-cream);
+  --foreground: #2b2620;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+html, body {
+  background: var(--background);
+  color: var(--foreground);
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
