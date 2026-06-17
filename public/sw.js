@@ -1,9 +1,15 @@
 // Minimal service worker — caches the app shell for offline launch.
 // Deliberately simple for Session 1; richer offline/recipe caching is later work.
-const CACHE_NAME = "memory-kitchen-v2";
+const CACHE_NAME = "memory-kitchen-v3";
 const APP_SHELL = ["/manifest.json"];
 
 self.addEventListener("install", (event) => {
+  // Take over from any previous worker (e.g. the poisoned v1/v2) as soon as
+  // this one finishes installing, instead of waiting for every open tab to
+  // close. Without this, a tab opened before this update stays controlled by
+  // the old worker — and the old worker's broken cache entries keep being
+  // served — until the user manually closes every tab for the site.
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
   );
@@ -11,9 +17,14 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    Promise.all([
+      caches.keys().then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      ),
+      // Immediately become the controller of any already-open tabs so the
+      // fix applies on this activation, not on some future reload.
+      self.clients.claim(),
+    ])
   );
 });
 
