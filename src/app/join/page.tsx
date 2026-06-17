@@ -25,11 +25,18 @@ function JoinForm() {
 
     if (res.ok) {
       setStatus("sent");
-    } else {
-      const { error } = await res.json();
-      setErrorMsg(error ?? "Something went wrong.");
-      setStatus("error");
+      return;
     }
+
+    let message = "Something went wrong.";
+    try {
+      const data = await res.json();
+      if (data?.error) message = data.error;
+    } catch {
+      // Non-JSON error response (e.g. unexpected redirect/405) — fall back to generic message.
+    }
+    setErrorMsg(message);
+    setStatus("error");
   }
 
   return (
