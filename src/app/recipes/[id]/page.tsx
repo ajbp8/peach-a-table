@@ -44,7 +44,15 @@ export default async function RecipeDetailPage({
     notFound();
   }
 
-  const ownerName = Array.isArray(recipe.users) ? recipe.users[0]?.name : recipe.users?.name;
+  // Same shape as RecipeCard's RecipeCardData["users"] and profile/page.tsx's
+  // membershipRow cast — the Supabase client can't infer a precise type for
+  // a joined relation from an inline, untyped select() string, so without
+  // this cast the non-array branch of the ternary narrows to `never`.
+  const usersValue = recipe.users as
+    | { name: string | null }
+    | { name: string | null }[]
+    | null;
+  const ownerName = Array.isArray(usersValue) ? usersValue[0]?.name : usersValue?.name;
   const isOwner = recipe.owner_id === user.id;
 
   return (
