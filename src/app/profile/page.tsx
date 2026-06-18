@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import CreateHousehold from "@/components/CreateHousehold";
 import InviteLink from "@/components/InviteLink";
+import CreateRecipe from "@/components/CreateRecipe";
+import RecipeCard from "@/components/RecipeCard";
 
 // First real (non-placeholder) screen in the app, matching the "Profile"
-// mockup. Households, recipes, and friendships all exist as tables already
-// (Session 1), but nothing in the app could read or write them yet — this
-// page is where that wiring happens. Recipe creation itself is the next
-// session, so "Your recipes" only renders an empty state for now.
+// mockup. Session 2 wired up households and invites; Session 3 adds the
+// first version of "Your recipes" — real rows from the recipes table
+// instead of the placeholder text that used to sit here.
 export default async function ProfilePage() {
   const supabase = await createClient();
   const {
@@ -17,7 +18,7 @@ export default async function ProfilePage() {
     return null; // middleware already redirects unauthenticated visitors to /login
   }
 
-  const [profileResult, membershipResult, recipeCountResult, friendCountResult] =
+  const [profileResult, membershipResult, recipesResult, friendCountResult] =
     await Promise.all([
       supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
       supabase
@@ -27,8 +28,9 @@ export default async function ProfilePage() {
         .limit(1),
       supabase
         .from("recipes")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_id", user.id),
+        .select("id, name, meal_category, cuisine_tags, save_count")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false }),
       supabase
         .from("friendships")
         .select("id", { count: "exact", head: true })
@@ -48,7 +50,8 @@ export default async function ProfilePage() {
     ? familiesValue[0]?.name
     : familiesValue?.name;
 
-  const recipeCount = recipeCountResult.count ?? 0;
+  const recipes = recipesResult.data ?? [];
+  const recipeCount = recipes.length;
   const friendCount = friendCountResult.count ?? 0;
 
   return (
@@ -80,11 +83,20 @@ export default async function ProfilePage() {
         <h2 className="text-sm font-bold mb-2" style={{ color: "#1a1a1a" }}>
           Your recipes
         </h2>
-        <p className="text-xs text-neutral-500">
-          {recipeCount > 0
-            ? "Recipe list coming next session."
-            : "No recipes yet — adding recipes is coming in the next session."}
-        </p>
+
+        <CreateRecipe />
+
+        {recipes.length === 0 ? (
+          <p className="text-xs text-neutral-500">
+            No recipes yet — add your first one above.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {recipes.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} />
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
