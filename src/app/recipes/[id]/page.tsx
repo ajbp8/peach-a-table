@@ -24,7 +24,7 @@ export default async function RecipeDetailPage({
     supabase
       .from("recipes")
       .select(
-        "id, name, story, ingredients, source_url, meal_category, cuisine_tags, save_count, owner_id, users(name)"
+        "id, name, story, ingredients, source_url, meal_category, cuisine_tags, save_count, owner_id, users!recipes_owner_id_fkey(name)"
       )
       .eq("id", id)
       .maybeSingle(),
