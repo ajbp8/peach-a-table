@@ -3,28 +3,25 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-// Magic-link and invite emails redirect here with the session encoded in
-// the URL hash (#access_token=...&type=magiclink). Supabase's browser SDK
-// reads that hash automatically the moment it's instantiated and turns it
-// into a real session — but nothing in the app ever instantiated the
-// browser client, so the hash just sat there unused. The middleware would
-// see no session cookie, redirect to /login, and the user would be stuck
-// looking at the sign-in form forever, even though Supabase's own
-// dashboard showed them as already signed in.
+// Originally added to catch the magic-link callback (session arriving via
+// URL hash) and force a full reload so the server middleware would see the
+// new cookie. Login has since moved to a typed 6-digit code (see
+// src/app/login/page.tsx), which already does that same full reload itself
+// right after a successful verifyOtp call.
+//
+// That left this listener redundant — and actively harmful. Supabase's
+// browser client re-fires "SIGNED_IN" not just for a brand-new sign-in, but
+// also whenever it restores an already-valid session from storage on page
+// load. Because this component is mounted globally in the root layout, that
+// meant EVERY navigation (e.g. clicking "Profile" in the bottom nav) hit
+// this handler and immediately hard-redirected back to "/" before the
+// requested page ever got a chance to render. Instantiating the client is
+// still useful (keeps token refresh / multi-tab sync working); it just
+// intentionally no longer redirects on auth events.
 export default function AuthSessionListener() {
   useEffect(() => {
     const supabase = createClient();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") {
-        // Full reload, not a client-side route change — the new session
-        // cookie needs to be sent on the next request so the server
-        // middleware (which gates every page) actually sees it.
-        window.location.assign("/");
-      }
-    });
-
-    return () => listener.subscription.unsubscribe();
+    void supabase;
   }, []);
 
   return null;
