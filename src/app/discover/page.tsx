@@ -41,7 +41,7 @@ export default async function DiscoverPage({
 
   let query = supabase
     .from("recipes")
-    .select("id, name, meal_category, cuisine_tags, save_count, users(name)")
+    .select("id, name, meal_category, cuisine_tags, save_count, users!recipes_owner_id_fkey(name)")
     .neq("owner_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50);
