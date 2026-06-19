@@ -55,6 +55,17 @@ export default async function RecipeDetailPage({
   const ownerName = Array.isArray(usersValue) ? usersValue[0]?.name : usersValue?.name;
   const isOwner = recipe.owner_id === user.id;
 
+  // Same rpc as Discover, called with a single-element array — only
+  // relevant when you're not the owner (mockup never badges your own
+  // recipe on its own detail page).
+  let mutualFriends: number | null = null;
+  if (!isOwner) {
+    const { data: counts } = await supabase.rpc("mutual_friend_counts", {
+      p_user_ids: [recipe.owner_id],
+    });
+    mutualFriends = counts?.[0]?.mutual_count ?? 0;
+  }
+
   return (
     <main className="min-h-screen pb-6 bg-[var(--mk-cream)]">
       <div
@@ -68,10 +79,20 @@ export default async function RecipeDetailPage({
         <h1 className="text-xl font-bold" style={{ color: "#1a1a1a" }}>
           {recipe.name}
         </h1>
-        <p className="text-xs text-neutral-500 mt-1">
-          {ownerName ? `by ${ownerName}` : ""}
-          {recipe.meal_category ? ` · ${recipe.meal_category}` : ""}
-        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-xs text-neutral-500">
+            {ownerName ? `by ${ownerName}` : ""}
+            {recipe.meal_category ? ` · ${recipe.meal_category}` : ""}
+          </p>
+          {mutualFriends !== null && (
+            <span
+              className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white whitespace-nowrap"
+              style={{ background: "var(--mk-terracotta)" }}
+            >
+              👥 {mutualFriends}
+            </span>
+          )}
+        </div>
 
         {recipe.cuisine_tags && recipe.cuisine_tags.length > 0 && (
           <div className="flex gap-2 mt-2 flex-wrap">
