@@ -41,7 +41,7 @@ export default async function DiscoverPage({
 
   let query = supabase
     .from("recipes")
-    .select("id, name, meal_category, cuisine_tags, save_count, users!recipes_owner_id_fkey(name)")
+    .select("id, name, meal_category, cuisine_tags, save_count, owner_id, users!recipes_owner_id_fkey(name)")
     .neq("owner_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -50,6 +50,21 @@ export default async function DiscoverPage({
   if (cuisine) query = query.contains("cuisine_tags", [cuisine]);
 
   const { data: recipes } = await query;
+
+  // One rpc call for every card on the page, rather than one per card —
+  // mutual_friend_counts (Session 6 migration) takes the whole list of
+  // owner ids at once and aggregates server-side. Owners with zero mutual
+  // friends just don't come back in the result, so default to 0 below.
+  const ownerIds = [...new Set((recipes ?? []).map((r) => r.owner_id))];
+  const mutualMap = new Map<string, number>();
+  if (ownerIds.length > 0) {
+    const { data: counts } = await supabase.rpc("mutual_friend_counts", {
+      p_user_ids: ownerIds,
+    });
+    for (const row of counts ?? []) {
+      mutualMap.set(row.other_id, row.mutual_count);
+    }
+  }
 
   function pillHref(kind: "meal" | "cuisine", value: string) {
     const params = new URLSearchParams();
@@ -86,7 +101,11 @@ export default async function DiscoverPage({
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              mutualFriends={mutualMap.get(recipe.owner_id) ?? 0}
+            />
           ))}
         </div>
       )}
