@@ -23,9 +23,14 @@ export default async function SavedPage() {
     .eq("user_id", user.id)
     .order("saved_at", { ascending: false });
 
+  // Supabase types a nested to-one relation (saved_recipes -> recipes) as an
+  // array per row regardless of the actual foreign-key cardinality, so this
+  // flattens before filtering — same root cause as the users-relation casts
+  // in recipes/[id]/page.tsx and discover/page.tsx.
   const recipes = (saved ?? [])
     .map((row) => row.recipes)
-    .filter((r): r is NonNullable<typeof r> => r !== null);
+    .flat()
+    .filter((r): r is NonNullable<typeof r> => r != null);
 
   return (
     <main className="min-h-screen px-5 pt-8 pb-6 bg-[var(--mk-cream)]">
