@@ -53,7 +53,16 @@ function ownerName(users: RecipeCardData["users"]) {
   return Array.isArray(users) ? users[0]?.name ?? null : users.name ?? null;
 }
 
-export default function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
+export default function RecipeCard({
+  recipe,
+  mutualFriends,
+}: {
+  recipe: RecipeCardData;
+  // Undefined = "don't know / not applicable" (e.g. your own recipe on the
+  // Saved tab) and renders no badge. 0 still renders — the mockup shows the
+  // badge on every Discover card regardless of count.
+  mutualFriends?: number;
+}) {
   const { emoji, gradient } = styleFor(recipe.cuisine_tags, recipe.meal_category);
   const owner = ownerName(recipe.users);
 
@@ -63,8 +72,19 @@ export default function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
       className="block rounded-xl border overflow-hidden"
       style={{ borderColor: "var(--mk-border)", background: "white" }}
     >
-      <div className="h-24 flex items-center justify-center text-4xl" style={{ background: gradient }}>
+      <div
+        className="relative h-24 flex items-center justify-center text-4xl"
+        style={{ background: gradient }}
+      >
         {emoji}
+        {mutualFriends !== undefined && (
+          <span
+            className="absolute top-1.5 right-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white"
+            style={{ background: "rgba(0,0,0,0.45)" }}
+          >
+            👥 {mutualFriends}
+          </span>
+        )}
       </div>
       <div className="p-3">
         <p className="text-sm font-bold truncate" style={{ color: "#1a1a1a" }}>
