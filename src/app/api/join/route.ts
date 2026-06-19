@@ -7,6 +7,12 @@ import { NextResponse } from "next/server";
 // admin.inviteUserByEmail, which creates the auth user and emails them
 // a secure sign-in link. Public signups stay disabled in Supabase Auth
 // settings, so this server route is the ONLY path to a new account.
+//
+// Session 6: also creates an accepted friendship between inviter and
+// invitee right here. This is the only point in the app where two users
+// are guaranteed to have a real-world relationship (one invited the
+// other), so it's the natural place to seed the social graph — there's
+// no separate "send/accept friend request" flow in this build.
 export async function POST(request: Request) {
   const { email, token } = await request.json();
 
@@ -43,6 +49,12 @@ export async function POST(request: Request) {
       id: created.user.id,
       email,
       invited_by: invite.invited_by,
+    });
+
+    await admin.from("friendships").insert({
+      user_id: invite.invited_by,
+      friend_id: created.user.id,
+      status: "accepted",
     });
 
     await admin
