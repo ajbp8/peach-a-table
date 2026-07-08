@@ -29,10 +29,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased pb-16">
+      <body
+        className="font-sans antialiased pb-16"
+        style={{ background: "#e8e4df" }}
+      >
         <AuthSessionListener />
         <RegisterSW />
-        {children}
+        <div className="max-w-md mx-auto relative min-h-dvh bg-[var(--mk-cream)]">
+          {children}
+        </div>
         <BottomNav />
       </body>
     </html>
