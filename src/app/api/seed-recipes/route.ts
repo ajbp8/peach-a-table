@@ -32,7 +32,7 @@ export async function GET() {
     { name: "Ratatouille & poached eggs",   meal_category: "dinner", cuisine_tags: ["french"] },
     { name: "Chicken fried rice",           meal_category: "dinner", cuisine_tags: ["asian"] },
     { name: "Yaya Fried Rice",              meal_category: "dinner", cuisine_tags: ["asian"] },
-  ].map(r => ({ ...r, owner_id: owner.id, visibility: "family" }));
+  ].map(r => ({ ...r, owner_id: owner.id, visibility: "friends" }));
 
   const { data: existing } = await supabase
     .from("recipes")
