@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --mk-terracotta: #c8860a;
-  --mk-terracotta-light: #e8a832;
-  --mk-cream: #faf5ec;
-  --mk-border: #e8e3db;
+  --mk-terracotta: #3E7B5A;
+  --mk-terracotta-light: #6AAF88;
+  --mk-cream: #F3F8F5;
+  --mk-border: #D4E8DC;
 
   --background: var(--mk-cream);
-  --foreground: #2b2620;
+  --foreground: #1a2e22;
 }
 
 @theme inline {
