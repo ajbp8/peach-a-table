@@ -1,14 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import CreateHousehold from "@/components/CreateHousehold";
 import InviteLink from "@/components/InviteLink";
-import CreateRecipe from "@/components/CreateRecipe";
 import RecipeCard from "@/components/RecipeCard";
 import LogoutButton from "@/components/LogoutButton";
 
-// First real (non-placeholder) screen in the app, matching the "Profile"
-// mockup. Session 2 wired up households and invites; Session 3 adds the
-// first version of "Your recipes" — real rows from the recipes table
-// instead of the placeholder text that used to sit here.
 export default async function ProfilePage() {
   const supabase = await createClient();
   const {
@@ -16,7 +11,7 @@ export default async function ProfilePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return null; // middleware already redirects unauthenticated visitors to /login
+    return null;
   }
 
   const [profileResult, membershipResult, recipesResult, friendCountResult] =
@@ -60,7 +55,7 @@ export default async function ProfilePage() {
       <div className="text-center mb-6">
         <div
           className="w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-white text-xl font-bold"
-          style={{ background: "linear-gradient(135deg, #c8602a, #e8854a)" }}
+          style={{ background: "linear-gradient(135deg, #c8860a, #e8a832)" }}
         >
           {initials}
         </div>
@@ -82,19 +77,17 @@ export default async function ProfilePage() {
 
       <LogoutButton />
 
-      <div className="mt-2">
-        <h2 className="text-sm font-bold mb-2" style={{ color: "#1a1a1a" }}>
-          Your recipes
+      <div className="mt-4">
+        <h2 className="text-xs font-bold uppercase tracking-wide text-neutral-400 mb-2">
+          Your recipes ({recipeCount})
         </h2>
-
-        <CreateRecipe />
 
         {recipes.length === 0 ? (
           <p className="text-xs text-neutral-500">
-            No recipes yet — add your first one above.
+            No recipes yet — add one from the Recipes tab.
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-xl border px-3" style={{ borderColor: "var(--mk-border)" }}>
             {recipes.map((recipe) => (
               <RecipeCard key={recipe.id} recipe={recipe} />
             ))}
