@@ -3,6 +3,7 @@ import CreateHousehold from "@/components/CreateHousehold";
 import InviteLink from "@/components/InviteLink";
 import CreateRecipe from "@/components/CreateRecipe";
 import RecipeCard from "@/components/RecipeCard";
+import LogoutButton from "@/components/LogoutButton";
 
 // First real (non-placeholder) screen in the app, matching the "Profile"
 // mockup. Session 2 wired up households and invites; Session 3 adds the
@@ -78,6 +79,8 @@ export default async function ProfilePage() {
       {!familyName && <CreateHousehold />}
 
       <InviteLink />
+
+      <LogoutButton />
 
       <div className="mt-2">
         <h2 className="text-sm font-bold mb-2" style={{ color: "#1a1a1a" }}>
