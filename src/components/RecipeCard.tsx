@@ -9,23 +9,20 @@ export type RecipeCardData = {
   users?: { name: string | null } | { name: string | null }[] | null;
 };
 
-// Photo upload is explicitly out of scope for Session 3 — the design brief's
-// mockup itself only shows gradient + emoji placeholders, not real photo
-// UI, on every recipe card. This is that placeholder: a cuisine-tagged
-// gradient with a matching emoji, good enough to tell cards apart in a grid
-// until photo upload becomes its own session.
-const CUISINE_STYLES: Record<string, { emoji: string; gradient: string }> = {
-  italian: { emoji: "🍝", gradient: "linear-gradient(135deg, #c8602a, #e8854a)" },
-  mexican: { emoji: "🌮", gradient: "linear-gradient(135deg, #b8482e, #e0824a)" },
-  indian: { emoji: "🍛", gradient: "linear-gradient(135deg, #a8512a, #d98a3d)" },
-  chinese: { emoji: "🥡", gradient: "linear-gradient(135deg, #b8362e, #e0623f)" },
-  japanese: { emoji: "🍣", gradient: "linear-gradient(135deg, #4a6b5a, #7fa68c)" },
-  thai: { emoji: "🍜", gradient: "linear-gradient(135deg, #4a7a4a, #8cba6a)" },
-  french: { emoji: "🥐", gradient: "linear-gradient(135deg, #5a5a8a, #8a8ac0)" },
-  mediterranean: { emoji: "🥙", gradient: "linear-gradient(135deg, #3a7a7a, #6ab0a8)" },
-  american: { emoji: "🍔", gradient: "linear-gradient(135deg, #c8602a, #e8854a)" },
-  dessert: { emoji: "🍰", gradient: "linear-gradient(135deg, #b85a8a, #e092b8)" },
-  baking: { emoji: "🍞", gradient: "linear-gradient(135deg, #c89050, #e8b878)" },
+const CUISINE_STYLES: Record<string, { emoji: string; bg: string }> = {
+  italian:       { emoji: "🍝", bg: "#c8602a" },
+  mexican:       { emoji: "🌮", bg: "#b8482e" },
+  indian:        { emoji: "🍛", bg: "#a8512a" },
+  chinese:       { emoji: "🥡", bg: "#b8362e" },
+  japanese:      { emoji: "🍣", bg: "#4a6b5a" },
+  thai:          { emoji: "🍜", bg: "#4a7a4a" },
+  french:        { emoji: "🥐", bg: "#5a5a8a" },
+  mediterranean: { emoji: "🥙", bg: "#3a7a7a" },
+  american:      { emoji: "🍔", bg: "#c8602a" },
+  asian:         { emoji: "🍜", bg: "#4a7a6a" },
+  "middle-eastern": { emoji: "🫙", bg: "#8a6a2a" },
+  dessert:       { emoji: "🍰", bg: "#b85a8a" },
+  baking:        { emoji: "🍞", bg: "#c89050" },
 };
 
 const MEAL_EMOJI: Record<string, string> = {
@@ -36,16 +33,11 @@ const MEAL_EMOJI: Record<string, string> = {
   dessert: "🍰",
 };
 
-const DEFAULT_STYLE = { emoji: "🍽️", gradient: "linear-gradient(135deg, #c8602a, #e8854a)" };
-
 function styleFor(cuisineTags: string[] | null | undefined, mealCategory: string | null | undefined) {
   const firstTag = cuisineTags?.[0]?.toLowerCase();
   if (firstTag && CUISINE_STYLES[firstTag]) return CUISINE_STYLES[firstTag];
   const mealKey = mealCategory?.toLowerCase();
-  if (mealKey && MEAL_EMOJI[mealKey]) {
-    return { emoji: MEAL_EMOJI[mealKey], gradient: DEFAULT_STYLE.gradient };
-  }
-  return DEFAULT_STYLE;
+  return { emoji: (mealKey && MEAL_EMOJI[mealKey]) || "🍽️", bg: "#c8860a" };
 }
 
 function ownerName(users: RecipeCardData["users"]) {
@@ -58,45 +50,51 @@ export default function RecipeCard({
   mutualFriends,
 }: {
   recipe: RecipeCardData;
-  // Undefined = "don't know / not applicable" (e.g. your own recipe on the
-  // Saved tab) and renders no badge. 0 still renders — the mockup shows the
-  // badge on every Discover card regardless of count.
   mutualFriends?: number;
 }) {
-  const { emoji, gradient } = styleFor(recipe.cuisine_tags, recipe.meal_category);
+  const { emoji, bg } = styleFor(recipe.cuisine_tags, recipe.meal_category);
   const owner = ownerName(recipe.users);
 
   return (
     <Link
       href={`/recipes/${recipe.id}`}
-      className="block rounded-xl border overflow-hidden"
-      style={{ borderColor: "var(--mk-border)", background: "white" }}
+      className="flex items-center gap-3 py-2.5 border-b"
+      style={{ borderColor: "var(--mk-border)" }}
     >
+      {/* Small cuisine chip */}
       <div
-        className="relative h-24 flex items-center justify-center text-4xl"
-        style={{ background: gradient }}
+        className="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
+        style={{ background: bg }}
       >
         {emoji}
-        {mutualFriends !== undefined && (
-          <span
-            className="absolute top-1.5 right-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white"
-            style={{ background: "rgba(0,0,0,0.45)" }}
-          >
-            👥 {mutualFriends}
-          </span>
-        )}
       </div>
-      <div className="p-3">
-        <p className="text-sm font-bold truncate" style={{ color: "#1a1a1a" }}>
+
+      {/* Name + owner */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold truncate" style={{ color: "#1a1a1a" }}>
           {recipe.name}
         </p>
-        <div className="flex items-center justify-between mt-1">
-          <p className="text-xs text-neutral-500 truncate">
-            {owner ? `by ${owner}` : recipe.meal_category ?? ""}
-          </p>
-          <p className="text-xs text-neutral-500 whitespace-nowrap">❤️ {recipe.save_count ?? 0}</p>
-        </div>
+        {owner && (
+          <p className="text-[10px] text-neutral-400 truncate">by {owner}</p>
+        )}
       </div>
+
+      {/* Mutual friends badge */}
+      {mutualFriends !== undefined && mutualFriends > 0 && (
+        <span className="text-[10px] text-neutral-400 flex-shrink-0">
+          👥 {mutualFriends}
+        </span>
+      )}
+
+      {/* Save count */}
+      <span className="text-[10px] text-neutral-400 flex-shrink-0">
+        ♥ {recipe.save_count ?? 0}
+      </span>
+
+      {/* Chevron */}
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+        <path d="M4 2l4 4-4 4"/>
+      </svg>
     </Link>
   );
 }
