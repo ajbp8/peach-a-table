@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --mk-terracotta: #c8602a;
-  --mk-terracotta-light: #e8854a;
-  --mk-cream: #f7f4ef;
+  --mk-terracotta: #c8860a;
+  --mk-terracotta-light: #e8a832;
+  --mk-cream: #faf5ec;
   --mk-border: #e8e3db;
 
   --background: var(--mk-cream);
