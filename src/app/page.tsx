@@ -29,12 +29,6 @@ type SlotRow = {
   menu_dishes: DishRow[];
 };
 
-// Session 4's home page: the real "Your Menu" screen from the mockup,
-// replacing the Session-1 placeholder. Mirrors profile/page.tsx's shape -
-// a plain async server component, family membership gates everything else,
-// CreateHousehold is the fallback for a user with no household yet. The
-// week/day math lives in lib/menu.ts so this file only has to ask
-// "what does today's family menu look like" and render it.
 export default async function HomePage({
   searchParams,
 }: {
@@ -48,7 +42,7 @@ export default async function HomePage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return null; // middleware already redirects unauthenticated visitors to /login
+    return null;
   }
 
   const [profileResult, membershipResult, recipesResult] = await Promise.all([
@@ -148,7 +142,7 @@ export default async function HomePage({
               className="flex-1 rounded-[10px] border text-center py-2"
               style={{
                 borderColor: active ? "var(--mk-terracotta)" : "var(--mk-border)",
-                background: active ? "#fef5f0" : "white",
+                background: active ? "#fef9ee" : "white",
               }}
             >
               <div className="text-[9px] font-semibold uppercase text-neutral-500">
@@ -227,6 +221,26 @@ export default async function HomePage({
   );
 }
 
+function PotIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 32 32"
+      fill="none"
+      stroke="white"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 13h16v9.5a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V13z" />
+      <path d="M12 13v-3a4 4 0 0 1 8 0v3" />
+      <path d="M4 16h4M24 16h4" />
+      <path d="M13 20c1 1.5 5 1.5 6 0" />
+    </svg>
+  );
+}
+
 function Banner({ name }: { name: string }) {
   const hour = new Date().getHours();
   const greeting =
@@ -234,8 +248,12 @@ function Banner({ name }: { name: string }) {
   return (
     <div
       className="rounded-2xl p-4 text-white"
-      style={{ background: "linear-gradient(135deg, #c8602a 0%, #e8854a 100%)" }}
+      style={{ background: "linear-gradient(135deg, #c8860a 0%, #e8a832 100%)" }}
     >
+      <div className="flex items-center gap-2 mb-3 opacity-95">
+        <PotIcon />
+        <span className="text-sm font-bold tracking-wide">Memory Kitchen</span>
+      </div>
       <div className="text-[11px] opacity-80 mb-0.5">{greeting}</div>
       <div className="text-base font-extrabold mb-1">{name} 👋</div>
       <div className="text-[10px] opacity-75 leading-relaxed">
