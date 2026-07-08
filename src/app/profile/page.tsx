@@ -55,7 +55,7 @@ export default async function ProfilePage() {
       <div className="text-center mb-6">
         <div
           className="w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-white text-xl font-bold"
-          style={{ background: "linear-gradient(135deg, #c8860a, #e8a832)" }}
+          style={{ background: "linear-gradient(135deg, #3E7B5A, #6AAF88)" }}
         >
           {initials}
         </div>
