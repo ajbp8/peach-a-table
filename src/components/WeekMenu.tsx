@@ -13,12 +13,12 @@ const CUISINE_EMOJI: Record<string,string> = {
 };
 function getEmoji(r: Recipe) { const t = r.cuisine_tags?.[0]?.toLowerCase(); return (t && CUISINE_EMOJI[t]) || "🍽️"; }
 
-// Use LOCAL date components — toISOString() returns UTC which can be one day off for UTC+ timezones
+// LOCAL date helpers — toISOString() is UTC and shifts dates for UTC+ timezones
 function toISO(d: Date) {
   const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return `${y}-${mo}-${day}`;
 }
 function todayISO() { return toISO(new Date()); }
 
@@ -43,6 +43,7 @@ function RingsLogo() {
 export default function WeekMenu({ recipes }: { recipes: Recipe[] }) {
   const [mounted, setMounted] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
+  // Start empty — set to today on client mount to avoid SSR/client hydration mismatch
   const [selectedDay, setSelectedDay] = useState("");
   const [weekData, setWeekData] = useState<WeekData>({ week_id: null, slots: [] });
   const [loading, setLoading] = useState(true);
@@ -52,6 +53,7 @@ export default function WeekMenu({ recipes }: { recipes: Recipe[] }) {
   const [showLunch, setShowLunch] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Hydration fix: new Date() differs between server (UTC) and client (local tz)
   useEffect(() => {
     setMounted(true);
     setSelectedDay(todayISO());
@@ -124,6 +126,7 @@ export default function WeekMenu({ recipes }: { recipes: Recipe[] }) {
 
   return (
     <div className="min-h-screen bg-[var(--mk-cream)]">
+      {/* Banner */}
       <div style={{ background: "linear-gradient(135deg, #3E7B5A 0%, #6AAF88 100%)" }} className="px-5 pt-10 pb-5">
         <div className="flex items-center gap-2.5 mb-5">
           <RingsLogo />
@@ -143,9 +146,11 @@ export default function WeekMenu({ recipes }: { recipes: Recipe[] }) {
             style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.35)", color: "white" }}
           />
           {search.trim().length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl overflow-hidden z-30" style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl overflow-hidden z-30"
+              style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
               {addTarget && (
-                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border-b" style={{ color: "var(--mk-terracotta)", borderColor: "var(--mk-border)" }}>
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border-b"
+                  style={{ color: "var(--mk-terracotta)", borderColor: "var(--mk-border)" }}>
                   Adding to {addTarget}
                 </div>
               )}
@@ -165,6 +170,7 @@ export default function WeekMenu({ recipes }: { recipes: Recipe[] }) {
         </div>
       </div>
 
+      {/* Week nav */}
       <div className="bg-white border-b px-5 py-3" style={{ borderColor: "var(--mk-border)" }}>
         <div className="flex items-center justify-between mb-2.5">
           <button onClick={() => setWeekOffset(o => Math.max(-2, o - 1))} disabled={weekOffset <= -2}
@@ -194,6 +200,7 @@ export default function WeekMenu({ recipes }: { recipes: Recipe[] }) {
         </div>
       </div>
 
+      {/* Day detail */}
       <div className="px-5 pt-4 pb-28">
         <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-3">
           {selectedDay && new Date(selectedDay + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
@@ -202,21 +209,35 @@ export default function WeekMenu({ recipes }: { recipes: Recipe[] }) {
           <p className="text-xs text-neutral-400 text-center py-10">Loading…</p>
         ) : (
           <div className="space-y-2">
-            <MealSection label="Dinner" meal="dinner" emoji="🍽️" slot={slotFor("dinner")} isAdding={addTarget === "dinner"} onStartAdd={() => startAdding("dinner")} onRemove={removeDish} />
+            <MealSection label="Dinner" meal="dinner" emoji="🍽️"
+              slot={slotFor("dinner")} isAdding={addTarget === "dinner"}
+              onStartAdd={() => startAdding("dinner")} onRemove={removeDish} />
             <div className="flex flex-col gap-3 pt-1">
               {(showBreakfast || (slotFor("breakfast")?.dishes.length ?? 0) > 0) ? (
-                <MealSection label="Breakfast" meal="breakfast" emoji="🍳" slot={slotFor("breakfast")} isAdding={addTarget === "breakfast"} onStartAdd={() => startAdding("breakfast")} onRemove={removeDish} />
+                <MealSection label="Breakfast" meal="breakfast" emoji="🍳"
+                  slot={slotFor("breakfast")} isAdding={addTarget === "breakfast"}
+                  onStartAdd={() => startAdding("breakfast")} onRemove={removeDish} />
               ) : (
-                <button onClick={() => startAdding("breakfast")} className="text-xs font-semibold py-1 text-left" style={{ color: "var(--mk-terracotta)" }}>+ Add breakfast</button>
+                <button onClick={() => startAdding("breakfast")}
+                  className="text-xs font-semibold py-1 text-left" style={{ color: "var(--mk-terracotta)" }}>
+                  + Add breakfast
+                </button>
               )}
               {(showLunch || (slotFor("lunch")?.dishes.length ?? 0) > 0) ? (
-                <MealSection label="Lunch" meal="lunch" emoji="🥪" slot={slotFor("lunch")} isAdding={addTarget === "lunch"} onStartAdd={() => startAdding("lunch")} onRemove={removeDish} />
+                <MealSection label="Lunch" meal="lunch" emoji="🥪"
+                  slot={slotFor("lunch")} isAdding={addTarget === "lunch"}
+                  onStartAdd={() => startAdding("lunch")} onRemove={removeDish} />
               ) : (
-                <button onClick={() => startAdding("lunch")} className="text-xs font-semibold py-1 text-left" style={{ color: "var(--mk-terracotta)" }}>+ Add lunch</button>
+                <button onClick={() => startAdding("lunch")}
+                  className="text-xs font-semibold py-1 text-left" style={{ color: "var(--mk-terracotta)" }}>
+                  + Add lunch
+                </button>
               )}
             </div>
           </div>
         )}
+
+        {/* Nestor suggests */}
         {!loading && nestorSuggestions.length > 0 && (
           <div className="mt-8">
             <h2 className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "#3E7B5A" }}>✦ Nestor suggests</h2>
@@ -248,12 +269,16 @@ function MealSection({ label, meal, emoji, slot, isAdding, onStartAdd, onRemove 
   const dishes = slot?.dishes ?? [];
   return (
     <div className="bg-white rounded-xl border px-4 py-3" style={{ borderColor: "var(--mk-border)" }}>
-      <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: "var(--mk-terracotta)" }}>{emoji} {label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: "var(--mk-terracotta)" }}>
+        {emoji} {label}
+      </p>
       {dishes.length > 0 && (
         <div className="space-y-1.5 mb-2">
           {dishes.map(d => (
             <div key={d.id} className="flex items-center justify-between">
-              <span className="text-sm font-medium" style={{ color: "#1a1a1a" }}>{d.recipes?.name ?? d.free_text ?? "Dish"}</span>
+              <span className="text-sm font-medium" style={{ color: "#1a1a1a" }}>
+                {d.recipes?.name ?? d.free_text ?? "Dish"}
+              </span>
               <button onClick={() => onRemove(d.id)} className="text-neutral-300 hover:text-red-400 ml-3 text-xl leading-none">×</button>
             </div>
           ))}
@@ -261,10 +286,11 @@ function MealSection({ label, meal, emoji, slot, isAdding, onStartAdd, onRemove 
       )}
       {isAdding
         ? <p className="text-xs italic" style={{ color: "var(--mk-terracotta)" }}>Search above to add a recipe…</p>
-        : <button onClick={onStartAdd} className="text-xs font-medium" style={{ color: dishes.length > 0 ? "var(--mk-terracotta)" : "#bbb" }}>
+        : <button onClick={onStartAdd} className="text-xs font-medium"
+            style={{ color: dishes.length > 0 ? "var(--mk-terracotta)" : "#bbb" }}>
             {dishes.length > 0 ? "+ Add another" : `+ Add ${label.toLowerCase()}`}
           </button>
       }
     </div>
   );
-                  }
+}
