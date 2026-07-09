@@ -1,31 +1,29 @@
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import SaveButton from "@/components/SaveButton";
 
-// Matches mockup screen 3 minus chat/comments, which are a later session.
-// Photo upload is also out of scope here (see RecipeCard's comment) — the
-// hero is the same gradient + emoji placeholder used on the cards.
-export default async function RecipeDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+const CUISINE_EMOJI: Record<string, string> = {
+  italian: "🍝", mexican: "🌮", indian: "🍛", chinese: "🥡", japanese: "🍣",
+  thai: "🍜", french: "🥐", mediterranean: "🥙", american: "🍔",
+  "middle-eastern": "🫙", dessert: "🍰", baking: "🍞",
+};
+function getEmoji(tags: string[] | null) {
+  const t = tags?.[0]?.toLowerCase();
+  return (t && CUISINE_EMOJI[t]) || "🍽️";
+}
+
+export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return null;
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
   const [recipeResult, savedResult] = await Promise.all([
     supabase
       .from("recipes")
-      .select(
-        "id, name, story, ingredients, source_url, meal_category, cuisine_tags, save_count, owner_id, users!recipes_owner_id_fkey(name)"
-      )
+      .select("id, name, story, description, ingredients, instructions, source_url, meal_category, cuisine_tags, save_count, owner_id")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -37,70 +35,55 @@ export default async function RecipeDetailPage({
   ]);
 
   const recipe = recipeResult.data;
-  if (!recipe) {
-    // Either the recipe doesn't exist, or recipes_select_visible RLS hid
-    // it (e.g. a friends-only recipe from someone who isn't your friend) —
-    // both cases look identical to the visitor, which is the point.
-    notFound();
-  }
+  if (!recipe) notFound();
 
-  // Same shape as RecipeCard's RecipeCardData["users"] and profile/page.tsx's
-  // membershipRow cast — the Supabase client can't infer a precise type for
-  // a joined relation from an inline, untyped select() string, so without
-  // this cast the non-array branch of the ternary narrows to `never`.
-  const usersValue = recipe.users as
-    | { name: string | null }
-    | { name: string | null }[]
-    | null;
-  const ownerName = Array.isArray(usersValue) ? usersValue[0]?.name : usersValue?.name;
-  const isOwner = recipe.owner_id === user.id;
-
-  // Same rpc as Discover, called with a single-element array — only
-  // relevant when you're not the owner (mockup never badges your own
-  // recipe on its own detail page).
-  let mutualFriends: number | null = null;
-  if (!isOwner) {
-    const { data: counts } = await supabase.rpc("mutual_friend_counts", {
-      p_user_ids: [recipe.owner_id],
-    });
-    mutualFriends = counts?.[0]?.mutual_count ?? 0;
-  }
+  const isSaved = !!savedResult.data;
+  const emoji = getEmoji(recipe.cuisine_tags);
+  const ingredients = recipe.ingredients as string[] | string | null;
+  const instructions = recipe.instructions as string[] | string | null;
 
   return (
-    <main className="min-h-screen pb-6 bg-[var(--mk-cream)]">
+    <div className="min-h-screen" style={{ background: "var(--mk-cream)" }}>
+      {/* Header */}
       <div
-        className="h-40 flex items-center justify-center text-6xl"
-        style={{ background: "linear-gradient(135deg, #c8602a, #e8854a)" }}
+        style={{ background: "linear-gradient(135deg, #3E7B5A 0%, #6AAF88 100%)" }}
+        className="px-5 pt-10 pb-6"
       >
-        🍽️
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-sm font-medium mb-4"
+          style={{ color: "rgba(255,255,255,0.7)" }}
+        >
+          ← Back to menu
+        </Link>
+        <div className="flex items-start gap-3">
+          <span className="text-4xl">{emoji}</span>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-white leading-tight">{recipe.name}</h1>
+            {recipe.meal_category && (
+              <p className="text-xs mt-1 capitalize" style={{ color: "rgba(255,255,255,0.6)" }}>
+                {recipe.meal_category}
+              </p>
+            )}
+          </div>
+          <SaveButton recipeId={recipe.id} initialSaved={isSaved} />
+        </div>
+        {recipe.save_count != null && recipe.save_count > 0 && (
+          <p className="text-xs mt-3" style={{ color: "rgba(255,255,255,0.5)" }}>
+            ♥ Saved by {recipe.save_count} {recipe.save_count === 1 ? "person" : "people"}
+          </p>
+        )}
       </div>
 
-      <div className="px-5 pt-5">
-        <h1 className="text-xl font-bold" style={{ color: "#1a1a1a" }}>
-          {recipe.name}
-        </h1>
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs text-neutral-500">
-            {ownerName ? `by ${ownerName}` : ""}
-            {recipe.meal_category ? ` · ${recipe.meal_category}` : ""}
-          </p>
-          {mutualFriends !== null && (
-            <span
-              className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white whitespace-nowrap"
-              style={{ background: "var(--mk-terracotta)" }}
-            >
-              👥 {mutualFriends}
-            </span>
-          )}
-        </div>
-
-        {recipe.cuisine_tags && recipe.cuisine_tags.length > 0 && (
-          <div className="flex gap-2 mt-2 flex-wrap">
-            {recipe.cuisine_tags.map((tag: string) => (
+      <div className="px-5 pt-4 pb-24 space-y-3">
+        {/* Cuisine tags */}
+        {Array.isArray(recipe.cuisine_tags) && recipe.cuisine_tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {(recipe.cuisine_tags as string[]).map((tag: string) => (
               <span
                 key={tag}
-                className="rounded-full border px-2 py-0.5 text-[11px]"
-                style={{ borderColor: "var(--mk-border)", color: "#6b6358" }}
+                className="text-xs font-medium px-2.5 py-1 rounded-full capitalize"
+                style={{ background: "rgba(62,123,90,0.12)", color: "var(--mk-terracotta)" }}
               >
                 {tag}
               </span>
@@ -108,48 +91,86 @@ export default async function RecipeDetailPage({
           </div>
         )}
 
-        {!isOwner && (
-          <div className="mt-4">
-            <SaveButton recipeId={recipe.id} initiallySaved={Boolean(savedResult.data)} />
+        {/* Story */}
+        {recipe.story && (
+          <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--mk-terracotta)" }}>Story</p>
+            <p className="text-sm text-neutral-600 leading-relaxed italic">{recipe.story}</p>
           </div>
         )}
 
-        {recipe.story && (
-          <section className="mt-5">
-            <h2 className="text-sm font-bold mb-1" style={{ color: "#1a1a1a" }}>
-              The story
-            </h2>
-            <p className="text-sm text-neutral-700 whitespace-pre-wrap">{recipe.story}</p>
-          </section>
+        {/* Description */}
+        {recipe.description && (
+          <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--mk-terracotta)" }}>About</p>
+            <p className="text-sm text-neutral-600 leading-relaxed">{recipe.description}</p>
+          </div>
         )}
 
-        {recipe.ingredients && (
-          <section className="mt-5">
-            <h2 className="text-sm font-bold mb-1" style={{ color: "#1a1a1a" }}>
-              Ingredients
-            </h2>
-            <p className="text-sm text-neutral-700 whitespace-pre-wrap">{recipe.ingredients}</p>
-          </section>
+        {/* Ingredients */}
+        {ingredients && (
+          <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "var(--mk-terracotta)" }}>Ingredients</p>
+            {Array.isArray(ingredients) ? (
+              <ul className="space-y-1.5">
+                {ingredients.map((ing: string, idx: number) => (
+                  <li key={idx} className="text-sm text-neutral-700 flex items-start gap-2">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "var(--mk-terracotta)", opacity: 0.6 }} />
+                    {ing}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-neutral-600 whitespace-pre-line">{String(ingredients)}</p>
+            )}
+          </div>
         )}
 
+        {/* Instructions */}
+        {instructions && (
+          <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "var(--mk-terracotta)" }}>Instructions</p>
+            {Array.isArray(instructions) ? (
+              <ol className="space-y-3">
+                {instructions.map((step: string, idx: number) => (
+                  <li key={idx} className="text-sm text-neutral-700 flex items-start gap-3">
+                    <span
+                      className="text-xs font-bold pt-0.5 flex-shrink-0 w-4 text-right"
+                      style={{ color: "var(--mk-terracotta)" }}
+                    >{idx + 1}.</span>
+                    <span className="leading-relaxed">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">{String(instructions)}</p>
+            )}
+          </div>
+        )}
+
+        {/* Source URL */}
         {recipe.source_url && (
-          <section className="mt-5">
+          <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--mk-terracotta)" }}>Source</p>
             <a
               href={recipe.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold"
+              className="text-sm underline"
               style={{ color: "var(--mk-terracotta)" }}
             >
-              View original source →
+              {recipe.source_url}
             </a>
-          </section>
+          </div>
         )}
 
-        <p className="text-xs text-neutral-400 mt-6">
-          ❤️ Saved by {recipe.save_count ?? 0} {recipe.save_count === 1 ? "person" : "people"}
-        </p>
+        {/* Empty state */}
+        {!recipe.story && !recipe.description && !ingredients && !instructions && (
+          <div className="bg-white rounded-xl border p-6 text-center" style={{ borderColor: "var(--mk-border)" }}>
+            <p className="text-sm text-neutral-400">No recipe details added yet.</p>
+          </div>
+        )}
       </div>
-    </main>
+    </div>
   );
 }
