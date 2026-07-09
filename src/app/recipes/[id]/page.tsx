@@ -66,7 +66,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
               </p>
             )}
           </div>
-          <SaveButton recipeId={recipe.id} initialSaved={isSaved} />
+          <SaveButton recipeId={recipe.id} initiallySaved={isSaved} />
         </div>
         {recipe.save_count != null && recipe.save_count > 0 && (
           <p className="text-xs mt-3" style={{ color: "rgba(255,255,255,0.5)" }}>
@@ -76,7 +76,6 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="px-5 pt-4 pb-24 space-y-3">
-        {/* Cuisine tags */}
         {Array.isArray(recipe.cuisine_tags) && recipe.cuisine_tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {(recipe.cuisine_tags as string[]).map((tag: string) => (
@@ -91,7 +90,6 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           </div>
         )}
 
-        {/* Story */}
         {recipe.story && (
           <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--mk-terracotta)" }}>Story</p>
@@ -99,7 +97,6 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           </div>
         )}
 
-        {/* Description */}
         {recipe.description && (
           <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--mk-terracotta)" }}>About</p>
@@ -107,7 +104,6 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           </div>
         )}
 
-        {/* Ingredients */}
         {ingredients && (
           <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "var(--mk-terracotta)" }}>Ingredients</p>
@@ -126,7 +122,6 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           </div>
         )}
 
-        {/* Instructions */}
         {instructions && (
           <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "var(--mk-terracotta)" }}>Instructions</p>
@@ -148,23 +143,15 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           </div>
         )}
 
-        {/* Source URL */}
         {recipe.source_url && (
           <div className="bg-white rounded-xl border p-4" style={{ borderColor: "var(--mk-border)" }}>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--mk-terracotta)" }}>Source</p>
-            <a
-              href={recipe.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm underline"
-              style={{ color: "var(--mk-terracotta)" }}
-            >
+            <a href={recipe.source_url} target="_blank" rel="noopener noreferrer" className="text-sm underline" style={{ color: "var(--mk-terracotta)" }}>
               {recipe.source_url}
             </a>
           </div>
         )}
 
-        {/* Empty state */}
         {!recipe.story && !recipe.description && !ingredients && !instructions && (
           <div className="bg-white rounded-xl border p-6 text-center" style={{ borderColor: "var(--mk-border)" }}>
             <p className="text-sm text-neutral-400">No recipe details added yet.</p>
