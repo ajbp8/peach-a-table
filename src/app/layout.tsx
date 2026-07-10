@@ -13,6 +13,23 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Memory Kitchen",
   },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "Memory Kitchen",
+    description: "A mobile-first recipe sharing network for family and friends.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Memory Kitchen",
+      },
+    ],
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
