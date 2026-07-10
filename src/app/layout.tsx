@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     description: "A mobile-first recipe sharing network for family and friends.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/api/og",
         width: 1200,
         height: 630,
         alt: "Memory Kitchen",
